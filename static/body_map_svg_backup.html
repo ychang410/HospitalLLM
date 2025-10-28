@@ -1,0 +1,467 @@
+<!-- Body Map Component -->
+<style>
+.body-map-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.body-diagram {
+    max-width: 400px;
+    width: 100%;
+    pointer-events: auto;
+}
+
+.body-part {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    stroke: #8b6f47;
+    stroke-width: 1.5;
+    opacity: 0.9;
+    pointer-events: all;
+}
+
+.body-part:hover {
+    filter: brightness(1.2);
+    stroke: #ff9800;
+    stroke-width: 2.5;
+    opacity: 1;
+}
+
+.body-part.selected {
+    filter: brightness(1.3);
+    stroke: #ff5722;
+    stroke-width: 3;
+}
+
+.body-part.has-symptom {
+    fill: #ffb74d !important;
+    stroke: #f57c00;
+    stroke-width: 2.5;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 1; }
+}
+
+.symptoms-list {
+    margin-top: 20px;
+}
+
+.symptom-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 2px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.symptom-card .body-part-name {
+    font-weight: bold;
+    color: #495057;
+}
+
+.symptom-card .pain-level {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.symptom-card .btn-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+</style>
+
+<div class="body-map-container">
+    <svg class="body-diagram" viewBox="0 0 200 450" xmlns="http://www.w3.org/2000/svg">
+        <!-- Define gradients for more realistic look -->
+        <defs>
+            <radialGradient id="bodyGradient" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style="stop-color:#f5dcc8;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#e8c5a8;stop-opacity:1" />
+            </radialGradient>
+        </defs>
+        
+        <!-- Head (more realistic oval) -->
+        <ellipse class="body-part" data-part="head" cx="100" cy="35" rx="22" ry="28" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('head')"/>
+        
+        <!-- Neck -->
+        <path class="body-part" data-part="neck" 
+              d="M 88 58 Q 88 70, 90 78 L 110 78 Q 112 70, 112 58 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('neck')"/>
+        
+        <!-- Shoulders (curved, more natural) -->
+        <ellipse class="body-part" data-part="left_shoulder" cx="68" cy="90" rx="20" ry="16" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_shoulder')"/>
+        <ellipse class="body-part" data-part="right_shoulder" cx="132" cy="90" rx="20" ry="16" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_shoulder')"/>
+        
+        <!-- Chest (trapezoid shape) -->
+        <path class="body-part" data-part="chest" 
+              d="M 78 78 L 122 78 L 125 130 L 75 130 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('chest')"/>
+        
+        <!-- Abdomen (slightly curved) -->
+        <path class="body-part" data-part="abdomen" 
+              d="M 75 130 L 125 130 L 123 175 L 77 175 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('abdomen')"/>
+        
+        <!-- Upper Arms (tapered) -->
+        <path class="body-part" data-part="left_arm" 
+              d="M 50 90 Q 48 90, 46 95 L 43 150 Q 43 152, 45 152 L 53 152 Q 55 152, 55 150 L 56 95 Q 56 90, 54 90 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_arm')"/>
+        <path class="body-part" data-part="right_arm" 
+              d="M 150 90 Q 152 90, 154 95 L 157 150 Q 157 152, 155 152 L 147 152 Q 145 152, 145 150 L 144 95 Q 144 90, 146 90 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_arm')"/>
+        
+        <!-- Forearms -->
+        <path class="body-part" data-part="left_forearm" 
+              d="M 43 152 L 41 210 Q 41 213, 43 213 L 51 213 Q 53 213, 53 210 L 53 152 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_forearm')"/>
+        <path class="body-part" data-part="right_forearm" 
+              d="M 157 152 L 159 210 Q 159 213, 157 213 L 149 213 Q 147 213, 147 210 L 147 152 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_forearm')"/>
+        
+        <!-- Hands -->
+        <ellipse class="body-part" data-part="left_hand" cx="47" cy="225" rx="9" ry="13" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_hand')"/>
+        <ellipse class="body-part" data-part="right_hand" cx="153" cy="225" rx="9" ry="13" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_hand')"/>
+        
+        <!-- Pelvis/Hip area -->
+        <path class="body-part" data-part="pelvis" 
+              d="M 77 175 L 123 175 L 125 215 L 75 215 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('pelvis')"/>
+        
+        <!-- Thighs (tapered toward knees) -->
+        <path class="body-part" data-part="left_thigh" 
+              d="M 77 215 L 95 215 L 93 295 L 80 295 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_thigh')"/>
+        <path class="body-part" data-part="right_thigh" 
+              d="M 105 215 L 123 215 L 120 295 L 107 295 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_thigh')"/>
+        
+        <!-- Knees -->
+        <ellipse class="body-part" data-part="left_knee" cx="86.5" cy="300" rx="11" ry="13" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_knee')"/>
+        <ellipse class="body-part" data-part="right_knee" cx="113.5" cy="300" rx="11" ry="13" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_knee')"/>
+        
+        <!-- Lower Legs (calves) -->
+        <path class="body-part" data-part="left_leg" 
+              d="M 80 305 L 93 305 L 91 390 L 82 390 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_leg')"/>
+        <path class="body-part" data-part="right_leg" 
+              d="M 107 305 L 120 305 L 118 390 L 109 390 Z" 
+              style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_leg')"/>
+        
+        <!-- Feet -->
+        <ellipse class="body-part" data-part="left_foot" cx="86.5" cy="410" rx="13" ry="18" 
+                 transform="rotate(-5 86.5 410)" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('left_foot')"/>
+        <ellipse class="body-part" data-part="right_foot" cx="113.5" cy="410" rx="13" ry="18" 
+                 transform="rotate(5 113.5 410)" style="fill: url(#bodyGradient);" onclick="handleBodyPartClick('right_foot')"/>
+    </svg>
+</div>
+
+<div class="symptoms-list" id="symptomsList">
+    <!-- Selected symptoms will appear here -->
+</div>
+
+<!-- Symptom Input Modal -->
+<div class="modal fade" id="symptomModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">증상 입력</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">선택한 부위</label>
+                    <input type="text" class="form-control" id="selectedBodyPart" readonly>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">통증/불편함 정도 (1-10)</label>
+                    <div class="scale-container">
+                        <input type="range" class="scale-slider w-100" id="painLevel" min="1" max="10" value="5" 
+                               oninput="document.getElementById('painValue').textContent = this.value">
+                        <div class="scale-value text-center" id="painValue">5</div>
+                        <div class="scale-labels d-flex justify-content-between">
+                            <span>1 (약함)</span>
+                            <span>10 (심함)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">얼마나 오래 지속되고 있나요?</label>
+                    <input type="text" class="form-control" id="duration" placeholder="예: 3일, 1주일, 한 달">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">추가 설명 (선택사항)</label>
+                    <textarea class="form-control" id="description" rows="3" placeholder="예: 찌르는 듯한 통증, 간헐적으로 발생"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeSymptomModal()">취소</button>
+                <button type="button" class="btn btn-primary" id="saveSymptom">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global handler function for body part clicks
+function handleBodyPartClick(bodyPart) {
+    console.log('CLICKED:', bodyPart);
+    alert('클릭됨! 부위: ' + bodyPart);
+    openSymptomModal(bodyPart);
+}
+
+// Body part Korean names
+const bodyPartNames = {
+    'head': '머리',
+    'neck': '목',
+    'left_shoulder': '왼쪽 어깨',
+    'right_shoulder': '오른쪽 어깨',
+    'chest': '가슴',
+    'abdomen': '복부',
+    'left_arm': '왼쪽 팔',
+    'right_arm': '오른쪽 팔',
+    'left_forearm': '왼쪽 팔뚝',
+    'right_forearm': '오른쪽 팔뚝',
+    'left_hand': '왼쪽 손',
+    'right_hand': '오른쪽 손',
+    'pelvis': '골반',
+    'left_thigh': '왼쪽 허벅지',
+    'right_thigh': '오른쪽 허벅지',
+    'left_knee': '왼쪽 무릎',
+    'right_knee': '오른쪽 무릎',
+    'left_leg': '왼쪽 다리',
+    'right_leg': '오른쪽 다리',
+    'left_foot': '왼쪽 발',
+    'right_foot': '오른쪽 발'
+};
+
+let selectedSymptoms = [];
+let currentBodyPart = null;
+let symptomModal = null;
+
+// Initialize immediately (not waiting for DOMContentLoaded since this is loaded dynamically)
+(function initBodyMap() {
+    console.log('Body Map: Initializing...');
+    
+    // Wait a moment for elements to be in DOM
+    setTimeout(function() {
+        console.log('Body Map: Starting initialization after delay');
+        
+        const modalElement = document.getElementById('symptomModal');
+        console.log('Body Map: Modal element found:', !!modalElement);
+        console.log('Body Map: Bootstrap available:', typeof bootstrap !== 'undefined');
+        
+        if (modalElement && typeof bootstrap !== 'undefined') {
+            symptomModal = new bootstrap.Modal(modalElement);
+            console.log('Body Map: Modal initialized');
+        }
+        
+        // Add click handlers to body parts
+        const bodyParts = document.querySelectorAll('.body-part');
+        console.log('Body Map: Found body parts:', bodyParts.length);
+        
+        bodyParts.forEach((part, index) => {
+            const bodyPart = part.getAttribute('data-part');
+            console.log(`Body Map: Adding listener to ${bodyPart} (${index + 1}/${bodyParts.length})`);
+            
+            part.addEventListener('click', function(e) {
+                console.log('Body Map: Clicked on', bodyPart);
+                e.preventDefault();
+                e.stopPropagation();
+                openSymptomModal(bodyPart);
+            });
+            
+            // Add visual feedback
+            part.style.cursor = 'pointer';
+        });
+        
+        // Save symptom handler
+        const saveBtn = document.getElementById('saveSymptom');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveSymptom);
+            console.log('Body Map: Save button listener added');
+        }
+        
+        // Initialize symptoms list
+        updateSymptomsList();
+        console.log('Body Map: Initialization complete!');
+    }, 300);
+})();
+
+function openSymptomModal(bodyPart) {
+    console.log('openSymptomModal called for:', bodyPart);
+    currentBodyPart = bodyPart;
+    const bodyPartName = bodyPartNames[bodyPart];
+    console.log('Body part name:', bodyPartName);
+    
+    const selectedBodyPartElement = document.getElementById('selectedBodyPart');
+    const modalTitleElement = document.getElementById('modalTitle');
+    
+    if (!selectedBodyPartElement || !modalTitleElement) {
+        console.error('Modal elements not found!');
+        alert(`증상 입력 창을 열 수 없습니다. 페이지를 새로고침해주세요.`);
+        return;
+    }
+    
+    selectedBodyPartElement.value = bodyPartName;
+    modalTitleElement.textContent = `${bodyPartName} 증상 입력`;
+    
+    // Check if symptom already exists
+    const existingSymptom = selectedSymptoms.find(s => s.bodyPart === bodyPart);
+    if (existingSymptom) {
+        document.getElementById('painLevel').value = existingSymptom.painLevel;
+        document.getElementById('painValue').textContent = existingSymptom.painLevel;
+        document.getElementById('duration').value = existingSymptom.duration;
+        document.getElementById('description').value = existingSymptom.description || '';
+    } else {
+        // Reset form
+        document.getElementById('painLevel').value = 5;
+        document.getElementById('painValue').textContent = 5;
+        document.getElementById('duration').value = '';
+        document.getElementById('description').value = '';
+    }
+    
+    // Try to show modal
+    if (symptomModal) {
+        console.log('Showing modal using Bootstrap');
+        symptomModal.show();
+    } else {
+        console.log('Bootstrap modal not available, trying jQuery');
+        // Fallback: Try jQuery if available
+        if (typeof $ !== 'undefined') {
+            $('#symptomModal').modal('show');
+        } else {
+            // Last resort: manually show modal
+            console.log('Using manual modal display');
+            const modalElement = document.getElementById('symptomModal');
+            if (modalElement) {
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+                document.body.classList.add('modal-open');
+                
+                // Add backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.id = 'modalBackdrop';
+                document.body.appendChild(backdrop);
+            }
+        }
+    }
+}
+
+function closeSymptomModal() {
+    console.log('Closing modal');
+    if (symptomModal) {
+        symptomModal.hide();
+    } else {
+        // Manual close
+        const modalElement = document.getElementById('symptomModal');
+        if (modalElement) {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            
+            // Remove backdrop
+            const backdrop = document.getElementById('modalBackdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }
+    }
+}
+
+function saveSymptom() {
+    const painLevel = document.getElementById('painLevel').value;
+    const duration = document.getElementById('duration').value;
+    const description = document.getElementById('description').value;
+    
+    if (!duration) {
+        alert('지속 기간을 입력해주세요.');
+        return;
+    }
+    
+    // Remove existing symptom if any
+    selectedSymptoms = selectedSymptoms.filter(s => s.bodyPart !== currentBodyPart);
+    
+    // Add new symptom
+    selectedSymptoms.push({
+        bodyPart: currentBodyPart,
+        bodyPartName: bodyPartNames[currentBodyPart],
+        painLevel: parseInt(painLevel),
+        duration: duration,
+        description: description
+    });
+    
+    // Update UI
+    updateBodyPartHighlight(currentBodyPart, true);
+    updateSymptomsList();
+    
+    closeSymptomModal();
+}
+
+function updateBodyPartHighlight(bodyPart, hasSymptom) {
+    const element = document.querySelector(`[data-part="${bodyPart}"]`);
+    if (hasSymptom) {
+        element.classList.add('has-symptom');
+    } else {
+        element.classList.remove('has-symptom');
+    }
+}
+
+function updateSymptomsList() {
+    const container = document.getElementById('symptomsList');
+    
+    if (selectedSymptoms.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">선택된 증상이 없습니다. 신체 부위를 클릭해주세요.</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <h6 class="mb-3">선택된 증상 (${selectedSymptoms.length}개)</h6>
+        ${selectedSymptoms.map(symptom => `
+            <div class="symptom-card">
+                <div>
+                    <div class="body-part-name">${symptom.bodyPartName}</div>
+                    <div><small class="text-muted">통증: </small><span class="pain-level">${symptom.painLevel}/10</span></div>
+                    <div><small class="text-muted">기간: ${symptom.duration}</small></div>
+                    ${symptom.description ? `<div><small>${symptom.description}</small></div>` : ''}
+                </div>
+                <button class="btn-remove" onclick="removeSymptom('${symptom.bodyPart}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('')}
+    `;
+}
+
+function removeSymptom(bodyPart) {
+    selectedSymptoms = selectedSymptoms.filter(s => s.bodyPart !== bodyPart);
+    updateBodyPartHighlight(bodyPart, false);
+    updateSymptomsList();
+}
+
+function getSelectedSymptoms() {
+    return selectedSymptoms;
+}
+
+// Make function globally available
+window.getBodyMapSymptoms = getSelectedSymptoms;
+</script>

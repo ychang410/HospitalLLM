@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}병원 챗봇 - 의료진 요약{% endblock %}
+
+{% block content %}
+<div class="questionnaire-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-user-md text-primary"></i>
+            환자 정보 요약
+        </h2>
+        <div>
+            <button class="btn btn-outline-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> 인쇄
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='/'">
+                <i class="fas fa-plus"></i> 새 환자
+            </button>
+        </div>
+    </div>
+    
+    <div id="summaryContainer">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-3">환자 정보를 불러오는 중...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const patientId = {{ patient_id }};
+let patientSummary = null;
+let allResponses = [];
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadPatientSummary();
+    await loadAllResponses();
+    displaySummary();
+});
+
+async function loadPatientSummary() {
+    try {
+        const response = await fetch(`/api/patient-summary/${patientId}`);
+        if (response.ok) {
+            patientSummary = await response.json();
+        }
+    } catch (error) {
+        console.error('Error loading patient summary:', error);
+    }
+}
+
+async function loadAllResponses() {
+    try {
+        // This would need to be implemented in the backend
+        // For now, we'll create a mock response
+        allResponses = [
+            { question_text: "오늘 병원에 오신 이유는 무엇인가요?", response_text: "두통과 메스꺼움" },
+            { question_text: "어떤 증상을 경험하고 계신가요?", response_text: "오른쪽 머리가 욱신거리고 메스꺼움" },
+            { question_text: "현재 증상으로 인한 불편함 정도를 1-10점으로 평가해주세요", response_value: "8" }
+        ];
+    } catch (error) {
+        console.error('Error loading responses:', error);
+    }
+}
+
+function displaySummary() {
+    const container = document.getElementById('summaryContainer');
+    
+    if (!patientSummary) {
+        container.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                환자 요약 정보를 불러올 수 없습니다.
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="row">
+            <div class="col-md-8">
+                <div class="question-block">
+                    <h4 class="mb-3">
+                        <i class="fas fa-clipboard-list text-primary"></i>
+                        주요 정보 요약
+                    </h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>방문 사유</h6>
+                            <p class="text-muted">${patientSummary.visit_reason || '정보 없음'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>통증 정도</h6>
+                            <p class="text-muted">${patientSummary.pain_level ? patientSummary.pain_level + '/10' : '정보 없음'}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6>주요 증상</h6>
+                            <p class="text-muted">${patientSummary.symptoms || '정보 없음'}</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>현재 복용 약물</h6>
+                            <p class="text-muted">${patientSummary.current_medications || '없음'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>알레르기</h6>
+                            <p class="text-muted">${patientSummary.allergies || '없음'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="question-block">
+                    <h4 class="mb-3">
+                        <i class="fas fa-comments text-success"></i>
+                        상세 응답 내용
+                    </h4>
+                    <div id="detailedResponses">
+                        ${generateDetailedResponses()}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="question-block">
+                    <h5 class="mb-3">
+                        <i class="fas fa-user text-info"></i>
+                        환자 정보
+                    </h5>
+                    <p><strong>환자 ID:</strong> ${patientId}</p>
+                    <p><strong>작성 일시:</strong> ${new Date(patientSummary.created_at).toLocaleString('ko-KR')}</p>
+                </div>
+                
+                <div class="question-block">
+                    <h5 class="mb-3">
+                        <i class="fas fa-stethoscope text-warning"></i>
+                        진료 메모
+                    </h5>
+                    <textarea class="form-control" rows="8" placeholder="진료 메모를 입력하세요..."></textarea>
+                    <div class="mt-3">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="fas fa-save"></i> 메모 저장
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="question-block">
+                    <h5 class="mb-3">
+                        <i class="fas fa-tasks text-secondary"></i>
+                        다음 단계
+                    </h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary">
+                            <i class="fas fa-search"></i> 추가 검사 필요
+                        </button>
+                        <button class="btn btn-outline-success">
+                            <i class="fas fa-prescription-bottle-alt"></i> 처방전 작성
+                        </button>
+                        <button class="btn btn-outline-info">
+                            <i class="fas fa-calendar-plus"></i> 재진 예약
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function generateDetailedResponses() {
+    return allResponses.map((response, index) => `
+        <div class="response-item mb-3 p-3 border rounded">
+            <h6 class="text-primary">Q${index + 1}: ${response.question_text}</h6>
+            <p class="mb-0">
+                ${response.response_text || response.response_value || '답변 없음'}
+            </p>
+        </div>
+    `).join('');
+}
+
+// Print styles
+const printStyles = `
+    <style media="print">
+        .btn, .navigation-buttons, .no-print { display: none !important; }
+        .question-block { 
+            break-inside: avoid; 
+            margin-bottom: 20px; 
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+        }
+        body { font-size: 12px; }
+        .question-text { font-size: 14px; }
+    </style>
+`;
+
+document.head.insertAdjacentHTML('beforeend', printStyles);
+</script>
+{% endblock %}

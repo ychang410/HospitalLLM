@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}병원 챗봇 - 환자 등록{% endblock %}
+
+{% block content %}
+<div class="questionnaire-container">
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">
+            <i class="fas fa-hospital text-primary"></i>
+            병원 챗봇
+        </h1>
+        <p class="lead text-muted">진료 전 질문지를 작성해주세요</p>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="question-block">
+                <h3 class="mb-4">
+                    <i class="fas fa-user-plus text-primary"></i>
+                    환자 정보 입력
+                </h3>
+                
+                <form id="patientForm">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">이름</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dateOfBirth" class="form-label">생년월일</label>
+                        <input type="date" class="form-control" id="dateOfBirth" name="date_of_birth" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="gender" class="form-label">성별</label>
+                        <select class="form-control" id="gender" name="gender" required>
+                            <option value="">선택해주세요</option>
+                            <option value="male">남성</option>
+                            <option value="female">여성</option>
+                            <option value="other">기타</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">전화번호</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="010-1234-5678">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">이메일</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-arrow-right"></i>
+                            질문지 시작하기
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="question-block">
+                <h4 class="mb-3">
+                    <i class="fas fa-info-circle text-info"></i>
+                    이용 안내
+                </h4>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        총 15개의 일반 질문과 5개의 개인화 질문이 있습니다
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        각 질문에 대해 자세히 답변해주시면 더 정확한 진료가 가능합니다
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        중간에 중단하셔도 나중에 이어서 작성할 수 있습니다
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success"></i>
+                        입력하신 정보는 의료진에게 전달됩니다
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('patientForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const patientData = Object.fromEntries(formData.entries());
+    
+    try {
+        const response = await fetch('/api/patients/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(patientData)
+        });
+        
+        if (response.ok) {
+            const patient = await response.json();
+            window.location.href = `/questionnaire/${patient.id}`;
+        } else {
+            alert('환자 등록에 실패했습니다. 다시 시도해주세요.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('오류가 발생했습니다. 다시 시도해주세요.');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block title %}병원 챗봇 - 질문지{% endblock %}
+
+{% block content %}
+<div class="questionnaire-container">
+    <div class="progress-container">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fw-bold">진행률</span>
+            <span id="progressText" class="text-muted">0%</span>
+        </div>
+        <div class="progress">
+            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+    </div>
+    
+    <div id="questionContainer">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-3">질문을 불러오는 중...</p>
+        </div>
+    </div>
+    
+    <div class="loading-spinner" id="personalizedLoading">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">개인화 질문 생성 중...</span>
+        </div>
+        <p class="mt-3">개인화 질문을 생성하고 있습니다...</p>
+    </div>
+    
+    <div class="text-center mt-4">
+        <button id="completeBtn" class="btn btn-success btn-lg" style="display: none;">
+            <i class="fas fa-check"></i>
+            완료하기
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const patientId = {{ patient_id }};
+let currentQuestionIndex = 0;
+let questions = [];
+let personalizedQuestions = [];
+let responses = [];
+let isPersonalizedPhase = false;
+
+// Load questions on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadQuestions();
+    await loadProgress();
+    showCurrentQuestion();
+});
+
+async function loadQuestions() {
+    try {
+        const response = await fetch('/api/questions/');
+        questions = await response.json();
+        console.log('Loaded questions:', questions);
+    } catch (error) {
+        console.error('Error loading questions:', error);
+        alert('질문을 불러오는데 실패했습니다.');
+    }
+}
+
+async function loadProgress() {
+    try {
+        const response = await fetch(`/api/questionnaire-progress/${patientId}`);
+        const progress = await response.json();
+        console.log('Progress:', progress);
+        
+        if (progress.completed_general && progress.total_personalized_questions === 0) {
+            // Generate personalized questions
+            await generatePersonalizedQuestions();
+        } else if (progress.total_personalized_questions > 0) {
+            // Load existing personalized questions
+            await loadPersonalizedQuestions();
+        }
+        
+        updateProgress(progress);
+    } catch (error) {
+        console.error('Error loading progress:', error);
+    }
+}
+
+async function generatePersonalizedQuestions() {
+    document.getElementById('personalizedLoading').style.display = 'block';
+    
+    try {
+        const response = await fetch(`/api/generate-personalized-questions/${patientId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await loadPersonalizedQuestions();
+        } else {
+            alert('개인화 질문 생성에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('Error generating personalized questions:', error);
+        alert('개인화 질문 생성 중 오류가 발생했습니다.');
+    } finally {
+        document.getElementById('personalizedLoading').style.display = 'none';
+    }
+}
+
+async function generatePersonalizedQuestionsAndContinue() {
+    console.log('Generating personalized questions and continuing...');
+    
+    // Show loading message
+    const container = document.getElementById('questionContainer');
+    container.innerHTML = `
+        <div class="question-block">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">로딩 중...</span>
+                </div>
+                <h4>개인화 질문을 생성하고 있습니다...</h4>
+                <p class="text-muted">AI가 당신의 답변을 분석해서 맞춤 질문을 만들고 있습니다.</p>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/api/generate-personalized-questions/${patientId}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await loadPersonalizedQuestions();
+            
+            if (personalizedQuestions.length > 0) {
+                // Switch to personalized questions
+                isPersonalizedPhase = true;
+                currentQuestionIndex = 0;
+                showCurrentQuestion();
+                updateProgressDisplay();
+            } else {
+                showCompletion();
+            }
+        } else {
+            alert('개인화 질문 생성에 실패했습니다.');
+            showCompletion();
+        }
+    } catch (error) {
+        console.error('Error generating personalized questions:', error);
+        alert('개인화 질문 생성 중 오류가 발생했습니다.');
+        showCompletion();
+    }
+}
+
+async function loadPersonalizedQuestions() {
+    try {
+        const response = await fetch(`/api/personalized-questions/${patientId}`);
+        personalizedQuestions = await response.json();
+        console.log('Loaded personalized questions:', personalizedQuestions);
+    } catch (error) {
+        console.error('Error loading personalized questions:', error);
+    }
+}
+
+function showCurrentQuestion() {
+    const container = document.getElementById('questionContainer');
+    
+    if (isPersonalizedPhase) {
+        if (currentQuestionIndex >= personalizedQuestions.length) {
+            showCompletion();
+            return;
+        }
+        showQuestion(personalizedQuestions[currentQuestionIndex], currentQuestionIndex + 1, personalizedQuestions.length, true);
+    } else {
+        if (currentQuestionIndex >= questions.length) {
+            // Switch to personalized questions
+            if (personalizedQuestions.length > 0) {
+                isPersonalizedPhase = true;
+                currentQuestionIndex = 0;
+                showCurrentQuestion();
+                return;
+            } else {
+                // Generate personalized questions if they don't exist
+                generatePersonalizedQuestionsAndContinue();
+                return;
+            }
+        }
+        showQuestion(questions[currentQuestionIndex], currentQuestionIndex + 1, questions.length, false);
+    }
+}
+
+function showQuestion(question, questionNum, totalQuestions, isPersonalized) {
+    const container = document.getElementById('questionContainer');
+    const phaseText = isPersonalized ? '개인화 질문' : '일반 질문';
+    
+    let inputHtml = '';
+    
+    if (question.question_type === 'body_map') {
+        // Body Map will be loaded after rendering
+        inputHtml = `<div id="bodyMapContainer" style="min-height: 600px;">
+            <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">로딩 중...</span>
+                </div>
+                <p class="mt-3">신체 이미지를 불러오는 중입니다...</p>
+            </div>
+        </div>`;
+        // Load body map after container is created
+        setTimeout(() => {
+            fetch('/static/body_map.html')
+                .then(response => response.text())
+                .then(html => {
+                    const container = document.getElementById('bodyMapContainer');
+                    if (container) {
+                        // Extract and separate script from HTML
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        
+                        // Get all script tags
+                        const scripts = tempDiv.querySelectorAll('script');
+                        const scriptContent = Array.from(scripts).map(s => s.textContent).join('\n');
+                        
+                        // Remove script tags from HTML
+                        scripts.forEach(s => s.remove());
+                        
+                        // Insert HTML
+                        container.innerHTML = tempDiv.innerHTML;
+                        
+                        // Execute scripts
+                        if (scriptContent) {
+                            const scriptElement = document.createElement('script');
+                            scriptElement.textContent = scriptContent;
+                            document.body.appendChild(scriptElement);
+                        }
+                        
+                        console.log('Body map loaded successfully');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading body map:', error);
+                    const container = document.getElementById('bodyMapContainer');
+                    if (container) {
+                        container.innerHTML = '<div class="alert alert-danger">신체 이미지를 불러오는데 실패했습니다.</div>';
+                    }
+                });
+        }, 200);
+    } else if (question.question_type === 'scale') {
+        inputHtml = `
+            <div class="scale-container">
+                <input type="range" class="scale-slider" id="responseValue" min="1" max="10" value="5" 
+                       oninput="document.getElementById('scaleValue').textContent = this.value">
+                <div class="scale-value" id="scaleValue">5</div>
+                <div class="scale-labels">
+                    <span>1 (매우 약함)</span>
+                    <span>10 (매우 심함)</span>
+                </div>
+            </div>
+        `;
+    } else {
+        inputHtml = `
+            <textarea class="form-control" id="responseText" rows="4" 
+                      placeholder="답변을 입력해주세요..."></textarea>
+        `;
+    }
+    
+    container.innerHTML = `
+        <div class="question-block active">
+            <div class="question-header">
+                <div class="question-number">Q${questionNum}/${totalQuestions}</div>
+                <div class="badge bg-info">${phaseText}</div>
+            </div>
+            <div class="question-text">${question.question_text}</div>
+            <div class="question-input">
+                ${inputHtml}
+            </div>
+            <div class="navigation-buttons">
+                <button class="btn btn-secondary" onclick="goToPrevious()" 
+                        ${currentQuestionIndex === 0 && !isPersonalized ? 'disabled' : ''}>
+                    <i class="fas fa-arrow-left"></i> 이전
+                </button>
+                <button class="btn btn-primary" onclick="saveAndNext()">
+                    다음 <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Load existing response if available (only for general questions)
+    if (!isPersonalized) {
+        loadExistingResponse(question.id);
+    }
+}
+
+async function saveBodyPartSymptom(symptom) {
+    try {
+        const response = await fetch('/api/body-part-symptoms/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                body_part: symptom.bodyPart,
+                pain_level: symptom.painLevel,
+                duration: symptom.duration,
+                description: symptom.description || ''
+            })
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to save body part symptom');
+        }
+    } catch (error) {
+        console.error('Error saving body part symptom:', error);
+    }
+}
+
+function loadExistingResponse(questionId) {
+    const existingResponse = responses.find(r => r.question_id === questionId);
+    if (existingResponse) {
+        if (existingResponse.response_text) {
+            document.getElementById('responseText').value = existingResponse.response_text;
+        }
+        if (existingResponse.response_value) {
+            const slider = document.getElementById('responseValue');
+            const valueDisplay = document.getElementById('scaleValue');
+            if (slider && valueDisplay) {
+                slider.value = existingResponse.response_value;
+                valueDisplay.textContent = existingResponse.response_value;
+            }
+        }
+    }
+}
+
+async function saveAndNext() {
+    const question = isPersonalizedPhase ? 
+        personalizedQuestions[currentQuestionIndex] : 
+        questions[currentQuestionIndex];
+    
+    let responseText = null;
+    let responseValue = null;
+    
+    // Handle different question types
+    if (question.question_type === 'body_map') {
+        // Get symptoms from body map
+        const symptoms = window.getBodyMapSymptoms ? window.getBodyMapSymptoms() : [];
+        
+        if (symptoms.length === 0) {
+            alert('최소 1개 이상의 신체 부위를 선택해주세요.');
+            return;
+        }
+        
+        // Save each body part symptom
+        for (const symptom of symptoms) {
+            await saveBodyPartSymptom(symptom);
+        }
+        
+        responseText = JSON.stringify(symptoms);
+    } else {
+        const textElement = document.getElementById('responseText');
+        const valueElement = document.getElementById('responseValue');
+        responseText = textElement ? textElement.value : null;
+        responseValue = valueElement ? valueElement.value : null;
+    }
+    
+    const responseData = {
+        patient_id: patientId,
+        question_id: isPersonalizedPhase ? 10000 + question.id : question.id,
+        response_text: responseText,
+        response_value: responseValue
+    };
+    
+    try {
+        const response = await fetch('/api/responses/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(responseData)
+        });
+        
+        if (response.ok) {
+            // Update local responses array
+            const existingIndex = responses.findIndex(r => r.question_id === question.id);
+            if (existingIndex >= 0) {
+                responses[existingIndex] = responseData;
+            } else {
+                responses.push(responseData);
+            }
+            
+            currentQuestionIndex++;
+            showCurrentQuestion();
+            updateProgressDisplay();
+        } else {
+            alert('답변 저장에 실패했습니다.');
+        }
+    } catch (error) {
+        console.error('Error saving response:', error);
+        alert('답변 저장 중 오류가 발생했습니다.');
+    }
+}
+
+function goToPrevious() {
+    if (currentQuestionIndex > 0 || (currentQuestionIndex === 0 && isPersonalizedPhase)) {
+        if (currentQuestionIndex === 0 && isPersonalizedPhase) {
+            // Go back to last general question
+            isPersonalizedPhase = false;
+            currentQuestionIndex = questions.length - 1;
+        } else {
+            currentQuestionIndex--;
+        }
+        showCurrentQuestion();
+        updateProgressDisplay();
+    }
+}
+
+function showCompletion() {
+    const container = document.getElementById('questionContainer');
+    container.innerHTML = `
+        <div class="question-block">
+            <div class="text-center">
+                <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                <h3 class="mt-3">질문지 작성이 완료되었습니다!</h3>
+                <p class="lead text-muted">의료진이 확인할 수 있도록 요약을 준비하고 있습니다.</p>
+                <div class="mt-4">
+                    <button class="btn btn-success btn-lg" onclick="viewSummary()">
+                        <i class="fas fa-file-medical"></i>
+                        요약 보기
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('completeBtn').style.display = 'block';
+}
+
+function updateProgress(progress) {
+    const totalQuestions = progress.total_general_questions + progress.total_personalized_questions;
+    const completedQuestions = (progress.completed_general ? progress.total_general_questions : progress.current_question - 1) + 
+                              (progress.completed_personalized ? progress.total_personalized_questions : progress.current_personalized_question - 1);
+    
+    const percentage = totalQuestions > 0 ? (completedQuestions / totalQuestions) * 100 : 0;
+    
+    document.getElementById('progressBar').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = Math.round(percentage) + '%';
+}
+
+function updateProgressDisplay() {
+    // Calculate progress including personalized questions
+    const totalQuestions = questions.length + personalizedQuestions.length;
+    let currentProgress = 0;
+    
+    if (isPersonalizedPhase) {
+        currentProgress = questions.length + currentQuestionIndex;
+    } else {
+        currentProgress = currentQuestionIndex;
+    }
+    
+    const percentage = totalQuestions > 0 ? (currentProgress / totalQuestions) * 100 : 0;
+    document.getElementById('progressBar').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = Math.round(percentage) + '%';
+}
+
+function viewSummary() {
+    window.location.href = `/patient-summary/${patientId}`;
+}
+
+// Touch-friendly interactions
+document.addEventListener('touchstart', function(e) {
+    if (e.target.classList.contains('scale-slider')) {
+        e.target.style.transform = 'scale(1.1)';
+    }
+});
+
+document.addEventListener('touchend', function(e) {
+    if (e.target.classList.contains('scale-slider')) {
+        e.target.style.transform = 'scale(1)';
+    }
+});
+</script>
+{% endblock %}

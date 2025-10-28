@@ -1,0 +1,322 @@
+<!-- Body Map Component -->
+<style>
+.body-map-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 15px;
+}
+
+.body-diagram {
+    max-width: 400px;
+    width: 100%;
+}
+
+.body-part {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    fill: #e0e0e0;
+    stroke: #333;
+    stroke-width: 2;
+}
+
+.body-part:hover {
+    fill: #ffd700;
+    opacity: 0.8;
+}
+
+.body-part.selected {
+    fill: #ff6b6b;
+    stroke: #c92a2a;
+    stroke-width: 3;
+}
+
+.body-part.has-symptom {
+    fill: #ff8787;
+}
+
+.symptoms-list {
+    margin-top: 20px;
+}
+
+.symptom-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 2px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.symptom-card .body-part-name {
+    font-weight: bold;
+    color: #495057;
+}
+
+.symptom-card .pain-level {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.symptom-card .btn-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+</style>
+
+<div class="body-map-container">
+    <svg class="body-diagram" viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- Head -->
+        <ellipse class="body-part" data-part="head" cx="100" cy="40" rx="30" ry="35"/>
+        
+        <!-- Neck -->
+        <rect class="body-part" data-part="neck" x="90" y="70" width="20" height="20" rx="5"/>
+        
+        <!-- Shoulders -->
+        <ellipse class="body-part" data-part="left_shoulder" cx="65" cy="95" rx="18" ry="15"/>
+        <ellipse class="body-part" data-part="right_shoulder" cx="135" cy="95" rx="18" ry="15"/>
+        
+        <!-- Chest -->
+        <rect class="body-part" data-part="chest" x="75" y="90" width="50" height="45" rx="10"/>
+        
+        <!-- Abdomen -->
+        <rect class="body-part" data-part="abdomen" x="77" y="135" width="46" height="40" rx="8"/>
+        
+        <!-- Arms -->
+        <rect class="body-part" data-part="left_arm" x="45" y="95" width="15" height="60" rx="7"/>
+        <rect class="body-part" data-part="right_arm" x="140" y="95" width="15" height="60" rx="7"/>
+        
+        <!-- Forearms -->
+        <rect class="body-part" data-part="left_forearm" x="42" y="155" width="15" height="50" rx="7"/>
+        <rect class="body-part" data-part="right_forearm" x="143" y="155" width="15" height="50" rx="7"/>
+        
+        <!-- Hands -->
+        <ellipse class="body-part" data-part="left_hand" cx="50" cy="215" rx="10" ry="12"/>
+        <ellipse class="body-part" data-part="right_hand" cx="150" cy="215" rx="10" ry="12"/>
+        
+        <!-- Pelvis -->
+        <rect class="body-part" data-part="pelvis" x="77" y="175" width="46" height="30" rx="8"/>
+        
+        <!-- Thighs -->
+        <rect class="body-part" data-part="left_thigh" x="75" y="205" width="20" height="70" rx="10"/>
+        <rect class="body-part" data-part="right_thigh" x="105" y="205" width="20" height="70" rx="10"/>
+        
+        <!-- Knees -->
+        <circle class="body-part" data-part="left_knee" cx="85" cy="280" r="12"/>
+        <circle class="body-part" data-part="right_knee" cx="115" cy="280" r="12"/>
+        
+        <!-- Lower Legs -->
+        <rect class="body-part" data-part="left_leg" x="77" y="292" width="16" height="60" rx="8"/>
+        <rect class="body-part" data-part="right_leg" x="107" y="292" width="16" height="60" rx="8"/>
+        
+        <!-- Feet -->
+        <ellipse class="body-part" data-part="left_foot" cx="85" cy="365" rx="12" ry="20"/>
+        <ellipse class="body-part" data-part="right_foot" cx="115" cy="365" rx="12" ry="20"/>
+    </svg>
+</div>
+
+<div class="symptoms-list" id="symptomsList">
+    <!-- Selected symptoms will appear here -->
+</div>
+
+<!-- Symptom Input Modal -->
+<div class="modal fade" id="symptomModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">증상 입력</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">선택한 부위</label>
+                    <input type="text" class="form-control" id="selectedBodyPart" readonly>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">통증/불편함 정도 (1-10)</label>
+                    <div class="scale-container">
+                        <input type="range" class="scale-slider w-100" id="painLevel" min="1" max="10" value="5" 
+                               oninput="document.getElementById('painValue').textContent = this.value">
+                        <div class="scale-value text-center" id="painValue">5</div>
+                        <div class="scale-labels d-flex justify-content-between">
+                            <span>1 (약함)</span>
+                            <span>10 (심함)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">얼마나 오래 지속되고 있나요?</label>
+                    <input type="text" class="form-control" id="duration" placeholder="예: 3일, 1주일, 한 달">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">추가 설명 (선택사항)</label>
+                    <textarea class="form-control" id="description" rows="3" placeholder="예: 찌르는 듯한 통증, 간헐적으로 발생"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-primary" id="saveSymptom">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Body part Korean names
+const bodyPartNames = {
+    'head': '머리',
+    'neck': '목',
+    'left_shoulder': '왼쪽 어깨',
+    'right_shoulder': '오른쪽 어깨',
+    'chest': '가슴',
+    'abdomen': '복부',
+    'left_arm': '왼쪽 팔',
+    'right_arm': '오른쪽 팔',
+    'left_forearm': '왼쪽 팔뚝',
+    'right_forearm': '오른쪽 팔뚝',
+    'left_hand': '왼쪽 손',
+    'right_hand': '오른쪽 손',
+    'pelvis': '골반',
+    'left_thigh': '왼쪽 허벅지',
+    'right_thigh': '오른쪽 허벅지',
+    'left_knee': '왼쪽 무릎',
+    'right_knee': '오른쪽 무릎',
+    'left_leg': '왼쪽 다리',
+    'right_leg': '오른쪽 다리',
+    'left_foot': '왼쪽 발',
+    'right_foot': '오른쪽 발'
+};
+
+let selectedSymptoms = [];
+let currentBodyPart = null;
+let symptomModal = null;
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    symptomModal = new bootstrap.Modal(document.getElementById('symptomModal'));
+    
+    // Add click handlers to body parts
+    document.querySelectorAll('.body-part').forEach(part => {
+        part.addEventListener('click', function() {
+            const bodyPart = this.getAttribute('data-part');
+            openSymptomModal(bodyPart);
+        });
+    });
+    
+    // Save symptom handler
+    document.getElementById('saveSymptom').addEventListener('click', saveSymptom);
+});
+
+function openSymptomModal(bodyPart) {
+    currentBodyPart = bodyPart;
+    const bodyPartName = bodyPartNames[bodyPart];
+    
+    document.getElementById('selectedBodyPart').value = bodyPartName;
+    document.getElementById('modalTitle').textContent = `${bodyPartName} 증상 입력`;
+    
+    // Check if symptom already exists
+    const existingSymptom = selectedSymptoms.find(s => s.bodyPart === bodyPart);
+    if (existingSymptom) {
+        document.getElementById('painLevel').value = existingSymptom.painLevel;
+        document.getElementById('painValue').textContent = existingSymptom.painLevel;
+        document.getElementById('duration').value = existingSymptom.duration;
+        document.getElementById('description').value = existingSymptom.description || '';
+    } else {
+        // Reset form
+        document.getElementById('painLevel').value = 5;
+        document.getElementById('painValue').textContent = 5;
+        document.getElementById('duration').value = '';
+        document.getElementById('description').value = '';
+    }
+    
+    symptomModal.show();
+}
+
+function saveSymptom() {
+    const painLevel = document.getElementById('painLevel').value;
+    const duration = document.getElementById('duration').value;
+    const description = document.getElementById('description').value;
+    
+    if (!duration) {
+        alert('지속 기간을 입력해주세요.');
+        return;
+    }
+    
+    // Remove existing symptom if any
+    selectedSymptoms = selectedSymptoms.filter(s => s.bodyPart !== currentBodyPart);
+    
+    // Add new symptom
+    selectedSymptoms.push({
+        bodyPart: currentBodyPart,
+        bodyPartName: bodyPartNames[currentBodyPart],
+        painLevel: parseInt(painLevel),
+        duration: duration,
+        description: description
+    });
+    
+    // Update UI
+    updateBodyPartHighlight(currentBodyPart, true);
+    updateSymptomsList();
+    
+    symptomModal.hide();
+}
+
+function updateBodyPartHighlight(bodyPart, hasSymptom) {
+    const element = document.querySelector(`[data-part="${bodyPart}"]`);
+    if (hasSymptom) {
+        element.classList.add('has-symptom');
+    } else {
+        element.classList.remove('has-symptom');
+    }
+}
+
+function updateSymptomsList() {
+    const container = document.getElementById('symptomsList');
+    
+    if (selectedSymptoms.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">선택된 증상이 없습니다. 신체 부위를 클릭해주세요.</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <h6 class="mb-3">선택된 증상 (${selectedSymptoms.length}개)</h6>
+        ${selectedSymptoms.map(symptom => `
+            <div class="symptom-card">
+                <div>
+                    <div class="body-part-name">${symptom.bodyPartName}</div>
+                    <div><small class="text-muted">통증: </small><span class="pain-level">${symptom.painLevel}/10</span></div>
+                    <div><small class="text-muted">기간: ${symptom.duration}</small></div>
+                    ${symptom.description ? `<div><small>${symptom.description}</small></div>` : ''}
+                </div>
+                <button class="btn-remove" onclick="removeSymptom('${symptom.bodyPart}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('')}
+    `;
+}
+
+function removeSymptom(bodyPart) {
+    selectedSymptoms = selectedSymptoms.filter(s => s.bodyPart !== bodyPart);
+    updateBodyPartHighlight(bodyPart, false);
+    updateSymptomsList();
+}
+
+function getSelectedSymptoms() {
+    return selectedSymptoms;
+}
+
+// Make function globally available
+window.getBodyMapSymptoms = getSelectedSymptoms;
+</script>
