@@ -1,0 +1,241 @@
+{
+  "basic_info": {
+    "existing_disease": [
+      {
+        "role": "assistant",
+        "content": "먼저, 기존 질환에 대해 여쭤보겠습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "혹시 고혈압이나 당뇨병 등 기존에 진단받으신 만성 질환이 있으신가요?"
+      },
+      {
+        "role": "assistant",
+        "content": "만약 앓고 계시는 질환이 있으시다면, 언제부터 해당 질환을 가지게 되었는지 함께 말씀해주세요."
+      }
+    ],
+    "surgery_history": [
+      {
+        "role": "assistant",
+        "content": "다음으로는 수술 이력에 대해 물어보겠습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "혹시 과거에 받으신 수술이 있거나 특별한 치료 경험이 있으실까요?"
+      }
+    ],
+    "family_history": [
+      {
+        "role": "assistant",
+        "content": "다음으로는 가족력에 대해 물어보겠습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "혹시 가족 중에 유전적 질환이나 특정 질환을 앓고 계신 분이 있으신가요?"
+      }
+    ],
+    "lifestyle": [
+      {
+        "role": "assistant",
+        "content": "마지막으로 생활 습관에 대해 물어보겠습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "혹시 흡연이나 음주를 하시나요?"
+      }
+    ]
+  },
+  "main_diagnosis": {
+    "diagnosis_a": [
+      {
+        "role": "assistant",
+        "content": "주요 진단 내용 중 증상 A에 대해 물어보겠습니다. 현재 가장 우려되는 증상이 무엇인가요?"
+      },
+      {
+        "role": "user",
+        "content": "가슴 통증이 있습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "가슴 통증이 있으시는군요. 언제부터 시작되었고, 어떤 상황에서 발생하나요?"
+      },
+      {
+        "role": "user",
+        "content": "2주 전부터 시작되었고, 운동할 때나 계단을 오를 때 더 심해집니다."
+      },
+      {
+        "role": "assistant",
+        "content": "알겠습니다. 증상 A에 대한 정보를 확인했습니다."
+      }
+    ],
+    "diagnosis_b": [
+      {
+        "role": "assistant",
+        "content": "증상 B에 대해 물어보겠습니다. 추가로 느끼시는 증상이 있나요?"
+      },
+      {
+        "role": "user",
+        "content": "호흡이 가쁩니다."
+      },
+      {
+        "role": "assistant",
+        "content": "호흡이 가쁘시군요. 증상 A와 함께 발생하나요, 아니면 따로 발생하나요?"
+      },
+      {
+        "role": "user",
+        "content": "가슴 통증과 함께 발생합니다."
+      },
+      {
+        "role": "assistant",
+        "content": "감사합니다. 증상 B에 대한 정보를 확인했습니다."
+      }
+    ],
+    "diagnosis_c": [
+      {
+        "role": "assistant",
+        "content": "증상 C에 대해 물어보겠습니다. 다른 증상이 더 있으신가요?"
+      },
+      {
+        "role": "user",
+        "content": "어지러움도 있습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "어지러움도 있으시는군요. 언제 자주 발생하나요?"
+      },
+      {
+        "role": "user",
+        "content": "갑자기 일어설 때나 머리를 움직일 때 발생합니다."
+      },
+      {
+        "role": "assistant",
+        "content": "알겠습니다. 증상 C에 대한 정보를 확인했습니다."
+      }
+    ],
+    "examination": [
+      {
+        "role": "assistant",
+        "content": "검사에 대해 물어보겠습니다. 최근에 받으신 검사 결과가 있으신가요?"
+      },
+      {
+        "role": "user",
+        "content": "심전도 검사를 받았는데 이상이 없다고 했습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "심전도 검사 결과는 정상이셨군요. 다른 검사도 받으셨나요?"
+      },
+      {
+        "role": "user",
+        "content": "혈액 검사도 받았는데, 콜레스테롤 수치가 약간 높았습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "감사합니다. 검사 결과에 대한 정보를 확인했습니다."
+      }
+    ]
+  },
+  "new_pain": {
+    "other_pain": [
+      {
+        "role": "assistant",
+        "content": "그 외 통증에 대해 물어보겠습니다. 가슴 통증 외에 다른 부위의 통증이 있으신가요?"
+      },
+      {
+        "role": "user",
+        "content": "허리가 아픕니다."
+      },
+      {
+        "role": "assistant",
+        "content": "허리 통증이 있으시는군요. 언제부터 시작되었고, 어떤 활동 시 더 심해지나요?"
+      },
+      {
+        "role": "user",
+        "content": "1개월 전부터 시작되었고, 오래 앉아있거나 무거운 것을 들 때 더 아픕니다."
+      },
+      {
+        "role": "assistant",
+        "content": "알겠습니다. 그 외 통증에 대한 정보를 확인했습니다."
+      }
+    ],
+    "new_pain": [
+      {
+        "role": "assistant",
+        "content": "새로운 통증에 대해 물어보겠습니다. 최근에 새로 생긴 통증이나 증상이 있으신가요?"
+      },
+      {
+        "role": "user",
+        "content": "목과 어깨가 뻣뻣하고 아픕니다."
+      },
+      {
+        "role": "assistant",
+        "content": "목과 어깨 통증이 새로 생기셨군요. 언제부터 시작되었나요?"
+      },
+      {
+        "role": "user",
+        "content": "1주일 전부터 시작되었습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "감사합니다. 새로운 통증에 대한 정보를 확인했습니다."
+      }
+    ]
+  },
+  "side_effects": {
+    "medication": [
+      {
+        "role": "assistant",
+        "content": "복용 중인 약물에 대해 물어보겠습니다. 현재 복용 중인 약물이 있으신가요?"
+      },
+      {
+        "role": "user",
+        "content": "고혈압약과 당뇨약을 복용하고 있습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "알겠습니다. 약물 복용 중 특별한 부작용이나 이상 증상을 느끼신 적이 있나요?"
+      },
+      {
+        "role": "user",
+        "content": "가끔 어지러움을 느낍니다."
+      },
+      {
+        "role": "assistant",
+        "content": "어지러움을 느끼시는군요. 약물 복용 후 얼마나 지나서 발생하나요?"
+      },
+      {
+        "role": "user",
+        "content": "약을 먹은 직후에 가끔 발생합니다."
+      },
+      {
+        "role": "assistant",
+        "content": "감사합니다. 복용 약물과 부작용에 대한 정보를 확인했습니다."
+      }
+    ]
+  },
+  "additional_questions": {
+    "additional_question": [
+      {
+        "role": "assistant",
+        "content": "추가 질문이 있으신가요? 오늘 진료 시 궁금한 점이나 전달하고 싶은 사항이 있으시면 말씀해 주세요."
+      },
+      {
+        "role": "user",
+        "content": "운동을 해도 되는지 궁금합니다."
+      },
+      {
+        "role": "assistant",
+        "content": "운동에 대해 궁금하시는군요. 어떤 종류의 운동을 생각하고 계신가요?"
+      },
+      {
+        "role": "user",
+        "content": "가벼운 걷기나 스트레칭을 생각하고 있습니다."
+      },
+      {
+        "role": "assistant",
+        "content": "알겠습니다. 추가 질문에 대한 내용을 확인했습니다. 오늘 진료 시 의사 선생님께서 자세히 안내해 주실 것입니다."
+      }
+    ]
+  }
+}
+
