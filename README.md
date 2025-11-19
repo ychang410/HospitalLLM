@@ -11,20 +11,17 @@
 
 ## 시작하기
 
-### 1. Node.js 설치
-Node.js가 설치되어 있지 않다면 [Node.js 공식 사이트](https://nodejs.org/)에서 설치하세요.
-
-### 2. 의존성 설치
+### 1. 의존성 설치
 ```bash
 npm install
 ```
 
-### 3. 개발 서버 실행
+### 2. 개발 서버 실행
 ```bash
 npm run dev
 ```
 
-### 4. 빌드
+### 3. 빌드
 ```bash
 npm run build
 ```
