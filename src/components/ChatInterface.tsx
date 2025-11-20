@@ -8,11 +8,12 @@ import scripts from '../data/scripts.json';
 
 interface ChatInterfaceProps {
   patientInfo: PatientInfo;
+  medicalRecord: File | null;
+  patientId: string;
+  medicalRecordId: string;
 }
 
-export type Category = 'basic_info' | 'main_diagnosis' | 'new_pain' | 'side_effects' | 'additional_questions';
-
-export type BasicInfoSubSection = 'existing_disease' | 'surgery_history' | 'family_history' | 'lifestyle';
+export type Category = 'main_diagnosis' | 'new_pain' | 'side_effects' | 'additional_questions';
 
 export type MainDiagnosisSubSection = 'diagnosis_a' | 'diagnosis_b' | 'diagnosis_c' | 'examination';
 
@@ -20,14 +21,7 @@ export type NewPainSubSection = 'other_pain' | 'new_pain';
 export type SideEffectSubSection = 'medication';
 export type AdditionalSubSection = 'additional_question';
 
-export const categoryOrder: Category[] = ['basic_info', 'main_diagnosis', 'new_pain', 'side_effects', 'additional_questions'];
-
-export const basicInfoSubSections: { key: BasicInfoSubSection; label: string }[] = [
-  { key: 'existing_disease', label: '기존 질환' },
-  { key: 'surgery_history', label: '수술 이력' },
-  { key: 'family_history', label: '가족력' },
-  { key: 'lifestyle', label: '생활 습관' },
-];
+export const categoryOrder: Category[] = ['main_diagnosis', 'new_pain', 'side_effects', 'additional_questions'];
 
 export const mainDiagnosisSubSections: { key: MainDiagnosisSubSection; label: string }[] = [
   { key: 'diagnosis_a', label: '증상 A' },
@@ -57,19 +51,15 @@ export interface Message {
 }
 
 const categoryLabels: Record<Category, string> = {
-  'basic_info': '기본 정보',
   'main_diagnosis': '주요 진단 내용',
   'new_pain': '그외/새로운 통증',
   'side_effects': '부작용',
   'additional_questions': '기타',
 };
 
-export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
-  const [currentCategory, setCurrentCategory] = useState<Category>('basic_info'); // 초기에는 기본 정보 선택
-  const [maxReachedIndex, setMaxReachedIndex] = useState<number>(0); // 초기에는 기본 정보까지 도달
-  const [currentSubSection, setCurrentSubSection] = useState<BasicInfoSubSection | null>(null);
-  const [completedSubSections, setCompletedSubSections] = useState<Set<BasicInfoSubSection>>(new Set());
-  const [maxReachedSubSectionIndex, setMaxReachedSubSectionIndex] = useState<number>(-1); // -1: 아직 아무것도 안 함
+export default function ChatInterface({ patientInfo, medicalRecord, patientId, medicalRecordId }: ChatInterfaceProps) {
+  const [currentCategory, setCurrentCategory] = useState<Category>('main_diagnosis'); // 초기에는 주요 진단 내용 선택
+  const [maxReachedIndex, setMaxReachedIndex] = useState<number>(0); // 초기에는 주요 진단 내용까지 도달
   const [currentMainDiagnosisSubSection, setCurrentMainDiagnosisSubSection] = useState<MainDiagnosisSubSection | null>(null);
   const [completedMainDiagnosisSubSections, setCompletedMainDiagnosisSubSections] = useState<Set<MainDiagnosisSubSection>>(new Set());
   const [maxReachedMainDiagnosisSubSectionIndex, setMaxReachedMainDiagnosisSubSectionIndex] = useState<number>(-1);
@@ -89,28 +79,14 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
   const [messagesBySection, setMessagesBySection] = useState<Map<string, Message[]>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [loadedSubSections, setLoadedSubSections] = useState<Set<string>>(new Set());
-  const greetingShownRef = useRef(false);
   const mainDiagnosisIntroShownRef = useRef(false);
 
   const handleCategoryChange = (category: Category) => {
     const categoryIndex = categoryOrder.indexOf(category);
     
-    // 기본 정보 섹션인 경우
-    if (category === 'basic_info') {
-      setCurrentCategory(category);
-      setCurrentMainDiagnosisSubSection(null); // 다른 섹션의 서브 섹션 초기화
-      setCurrentNewPainSubSection(null);
-      return;
-    }
-    
     // 주요 진단 내용 섹션인 경우
     if (category === 'main_diagnosis') {
-      // 기본 정보의 모든 서브 섹션이 완료되어야 함
-      if (currentCategory === 'basic_info' && completedSubSections.size < basicInfoSubSections.length) {
-        return;
-      }
       setCurrentCategory(category);
-      setCurrentSubSection(null); // 다른 섹션의 서브 섹션 초기화
       setCurrentNewPainSubSection(null);
       setCurrentMainDiagnosisSubSection(null); // 서브 섹션은 아직 선택 안 됨
       setMaxReachedMainDiagnosisSubSectionIndex(-1); // 서브 섹션 인덱스 초기화
@@ -128,7 +104,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         return;
       }
       setCurrentCategory(category);
-      setCurrentSubSection(null); // 다른 섹션의 서브 섹션 초기화
       setCurrentMainDiagnosisSubSection(null);
       setCurrentNewPainSubSection(null); // 서브 섹션은 아직 선택 안 됨
       setMaxReachedNewPainSubSectionIndex(-1); // 서브 섹션 인덱스 초기화
@@ -136,16 +111,8 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
       return;
     }
     
-    // 기본 정보가 아닌 다른 탭으로 이동하려면, 기본 정보의 모든 서브 섹션이 완료되어야 함
-    if (currentCategory === 'basic_info' && categoryIndex > 0) {
-      if (completedSubSections.size < basicInfoSubSections.length) {
-        // 모든 서브 섹션이 완료되지 않았으면 이동 불가
-        return;
-      }
-    }
-    
     // 주요 진단 내용이 아닌 다른 탭으로 이동하려면, 주요 진단 내용의 모든 서브 섹션이 완료되어야 함
-    if (currentCategory === 'main_diagnosis' && categoryIndex > 1) {
+    if (currentCategory === 'main_diagnosis' && categoryIndex > 0) {
       if (completedMainDiagnosisSubSections.size < mainDiagnosisSubSections.length) {
         // 모든 서브 섹션이 완료되지 않았으면 이동 불가
         return;
@@ -153,26 +120,26 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
     }
     
     // 그외/새로운 통증으로 이동하려면, 주요 진단 내용의 모든 서브 섹션이 완료되어야 함
-    if (categoryIndex === 2 && categoryIndex > maxReachedIndex) {
+    if (categoryIndex === 1 && categoryIndex > maxReachedIndex) {
       if (completedMainDiagnosisSubSections.size < mainDiagnosisSubSections.length) {
         return;
       }
     }
     
     // 그외/새로운 통증이 아닌 다른 탭으로 이동하려면, 그외/새로운 통증의 모든 서브 섹션이 완료되어야 함
-    if (currentCategory === 'new_pain' && categoryIndex > 2) {
+    if (currentCategory === 'new_pain' && categoryIndex > 1) {
       if (completedNewPainSubSections.size < newPainSubSections.length) {
         return;
       }
     }
     
     // 부작용으로 이동하려면, 그외/새로운 통증의 모든 서브 섹션이 완료되어야 함
-    if (categoryIndex === 3 && completedNewPainSubSections.size < newPainSubSections.length) {
+    if (categoryIndex === 2 && completedNewPainSubSections.size < newPainSubSections.length) {
       return;
     }
     
     // 기타로 이동하려면, 부작용의 모든 서브 섹션이 완료되어야 함
-    if (categoryIndex === 4 && completedSideEffectSubSections.size < sideEffectSubSections.length) {
+    if (categoryIndex === 3 && completedSideEffectSubSections.size < sideEffectSubSections.length) {
       return;
     }
     
@@ -182,12 +149,14 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         return;
       }
       setCurrentCategory(category);
-      setCurrentSubSection(null);
       setCurrentMainDiagnosisSubSection(null);
       setCurrentNewPainSubSection(null);
       setCurrentSideEffectSubSection(null);
       setCurrentAdditionalSubSection(null);
       setMaxReachedSideEffectSubSectionIndex(-1);
+      if (categoryIndex > maxReachedIndex) {
+        setMaxReachedIndex(categoryIndex);
+      }
       return;
     }
     
@@ -197,47 +166,15 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         return;
       }
       setCurrentCategory(category);
-      setCurrentSubSection(null);
       setCurrentMainDiagnosisSubSection(null);
       setCurrentNewPainSubSection(null);
       setCurrentSideEffectSubSection(null);
       setCurrentAdditionalSubSection(null);
       setMaxReachedAdditionalSubSectionIndex(-1);
-      return;
-    }
-    
-    // 이미 도달한 탭이거나 바로 다음 탭인 경우에만 이동 가능
-    // 단, 부작용(3)과 추가 질문(4)은 서브섹션이 없으므로 이 로직에서 처리하지 않음
-    if (categoryIndex <= maxReachedIndex + 1 && categoryIndex < 3) {
-      setCurrentCategory(category);
-      // 다음 탭으로 진행한 경우 maxReachedIndex 업데이트
       if (categoryIndex > maxReachedIndex) {
         setMaxReachedIndex(categoryIndex);
       }
-    }
-  };
-
-  const handleSubSectionChange = (subSection: BasicInfoSubSection) => {
-    const subSectionIndex = basicInfoSubSections.findIndex(s => s.key === subSection);
-    if (subSectionIndex === -1) return;
-
-    const nextAllowedIndex = maxReachedSubSectionIndex + 1;
-    if (subSectionIndex > nextAllowedIndex) {
       return;
-    }
-
-    setCurrentSubSection(subSection);
-
-    if (subSectionIndex === nextAllowedIndex) {
-      setMaxReachedSubSectionIndex(subSectionIndex);
-      setCompletedSubSections(prev => {
-        const updated = new Set(prev);
-        updated.add(subSection);
-        if (updated.size === basicInfoSubSections.length) {
-          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 1));
-        }
-        return updated;
-      });
     }
   };
 
@@ -258,7 +195,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         const updated = new Set(prev);
         updated.add(subSection);
         if (updated.size === mainDiagnosisSubSections.length) {
-          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2));
+          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 1)); // 그외/새로운 통증 섹션 인덱스
         }
         return updated;
       });
@@ -282,7 +219,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         const updated = new Set(prev);
         updated.add(subSection);
         if (updated.size === newPainSubSections.length) {
-          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3));
+          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2)); // 부작용 섹션 인덱스
         }
         return updated;
       });
@@ -306,7 +243,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         const updated = new Set(prev);
         updated.add(subSection);
         if (updated.size === sideEffectSubSections.length) {
-          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 4));
+          setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3)); // 기타 섹션 인덱스
         }
         return updated;
       });
@@ -337,10 +274,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
   // 현재 활성화된 서브섹션의 메시지만 가져오기
   const getCurrentMessages = (): Message[] => {
     // 서브섹션이 활성화된 경우
-    if (currentCategory === 'basic_info' && currentSubSection) {
-      const sectionKey = `basic_info_${currentSubSection}`;
-      return messagesBySection.get(sectionKey) || [];
-    }
     if (currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection) {
       const sectionKey = `main_diagnosis_${currentMainDiagnosisSubSection}`;
       return messagesBySection.get(sectionKey) || [];
@@ -358,11 +291,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
       return messagesBySection.get(sectionKey) || [];
     }
     
-    // 서브섹션이 없고 기본 정보 섹션인 경우 인사 메시지 표시
-    if (currentCategory === 'basic_info' && !currentSubSection) {
-      return messagesBySection.get('greeting') || [];
-    }
-    
     // 서브섹션이 없고 주요 진단 내용 섹션인 경우 인트로 메시지 표시
     if (currentCategory === 'main_diagnosis' && !currentMainDiagnosisSubSection) {
       return messagesBySection.get('main_diagnosis_intro') || [];
@@ -372,38 +300,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
   };
 
   const currentMessages = getCurrentMessages();
-
-  // 기본 정보 섹션 선택 시 인사 메시지 표시
-  useEffect(() => {
-    if (currentCategory === 'basic_info' && !currentSubSection && !greetingShownRef.current) {
-      const greetingMessages: Message[] = [
-        {
-          id: `greeting_0_${Date.now()}`,
-          role: 'assistant',
-          content: `안녕하세요 ${patientName}님,`,
-          timestamp: new Date(),
-        },
-        {
-          id: `greeting_1_${Date.now()}`,
-          role: 'assistant',
-          content: `저는 오늘 ${patientName}님의 원활한 병원 진료를 돕기 위해 여기에 있습니다.`,
-          timestamp: new Date(),
-        },
-        {
-          id: `greeting_2_${Date.now()}`,
-          role: 'assistant',
-          content: `본격적으로 ${patientName}님의 병원 방문을 돕기 전에, ${patientName}님에게 몇 가지 기본 정보들을 여쭤보고자 합니다.`,
-          timestamp: new Date(),
-        },
-      ];
-      setMessagesBySection(prev => {
-        const newMap = new Map(prev);
-        newMap.set('greeting', greetingMessages);
-        return newMap;
-      });
-      greetingShownRef.current = true;
-    }
-  }, [currentCategory, currentSubSection, patientName]);
 
   // 주요 진단 내용 섹션 선택 시 인트로 메시지 표시
   useEffect(() => {
@@ -467,11 +363,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
       setLoadedSubSections(prev => new Set([...prev, sectionKey]));
     };
 
-    // 기본 정보 서브섹션
-    if (currentCategory === 'basic_info' && currentSubSection) {
-      loadScript('basic_info', currentSubSection);
-    }
-
     // 주요 진단 내용 서브섹션
     if (currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection) {
       loadScript('main_diagnosis', currentMainDiagnosisSubSection);
@@ -493,7 +384,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
     }
   }, [
     currentCategory,
-    currentSubSection,
     currentMainDiagnosisSubSection,
     currentNewPainSubSection,
     currentSideEffectSubSection,
@@ -505,9 +395,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
     // 현재 활성화된 서브섹션 키 찾기
     let sectionKey: string | null = null;
     
-    if (currentCategory === 'basic_info' && currentSubSection) {
-      sectionKey = `basic_info_${currentSubSection}`;
-    } else if (currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection) {
+    if (currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection) {
       sectionKey = `main_diagnosis_${currentMainDiagnosisSubSection}`;
     } else if (currentCategory === 'new_pain' && currentNewPainSubSection) {
       sectionKey = `new_pain_${currentNewPainSubSection}`;
@@ -551,68 +439,14 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
         currentCategory={currentCategory} 
         onCategoryChange={handleCategoryChange}
         maxReachedIndex={maxReachedIndex}
-        isBasicInfoComplete={completedSubSections.size === basicInfoSubSections.length}
         isMainDiagnosisComplete={completedMainDiagnosisSubSections.size === mainDiagnosisSubSections.length}
         isNewPainComplete={completedNewPainSubSections.size === newPainSubSections.length}
         isSideEffectsComplete={completedSideEffectSubSections.size === sideEffectSubSections.length}
       />
       
-      {/* 기본 정보 섹션일 때 서브 섹션 탭 표시 - 메인 탭 바로 아래에 수평으로 팝업 */}
-      {currentCategory === 'basic_info' && (
-        <div className="absolute left-[60px] top-[111px] animate-fade-in-slide">
-          {/* 서브 섹션 카드 - 일반 직사각형 둥근 모서리, 수평 배치 */}
-          <div className="bg-white rounded-xl shadow-lg border border-zinc-300 px-4 py-3">
-            {/* 서브 섹션 버튼들 - 가로로 배치 */}
-            <div className="flex gap-3">
-              {basicInfoSubSections.map((subSection, index) => {
-                const isActive = currentSubSection === subSection.key;
-                const isCompleted = completedSubSections.has(subSection.key);
-                // 첫 번째 서브 섹션만 클릭 가능, 나머지는 순서대로
-                const isReachable = maxReachedSubSectionIndex === -1 
-                  ? index === 0  // 처음에는 첫 번째만
-                  : index <= maxReachedSubSectionIndex + 1;  // 이후에는 순차적으로
-                const isDisabled = !isReachable;
-                // 초기 상태(maxReachedIndex === -1)에서는 첫 번째만 흰색, 나머지는 회색
-                const isInitialState = maxReachedIndex === -1;
-                // 다음 활성화될 서브섹션 (흰색으로 표시) - maxReachedSubSectionIndex가 다음 활성화될 인덱스를 의미
-                const isNextActive = !isActive && !isCompleted && isReachable && maxReachedSubSectionIndex >= 0 && index === maxReachedSubSectionIndex;
-                
-                return (
-                  <button
-                    key={subSection.key}
-                    onClick={() => {
-                      if (isReachable) {
-                        handleSubSectionChange(subSection.key);
-                      }
-                    }}
-                    disabled={isDisabled}
-                    className={`px-5 py-3 rounded-lg text-lg font-semibold font-inter transition-all duration-200 whitespace-nowrap ${
-                      isActive
-                        ? 'bg-orange-200 text-black shadow-sm'
-                        : isCompleted
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : isNextActive || (isInitialState && index === 0)
-                        ? 'bg-white text-gray-700 border border-gray-200 cursor-pointer hover:bg-gray-50 hover:border-gray-300'
-                        : isInitialState
-                        ? 'bg-gray-100 text-gray-400'
-                        : isDisabled
-                        ? 'bg-gray-100 text-gray-400'
-                        : 'bg-gray-50 text-gray-700 border border-gray-200 cursor-pointer hover:bg-gray-100 hover:border-gray-300'
-                    }`}
-                    style={isDisabled ? { cursor: 'not-allowed' } : { cursor: 'pointer' }}
-                  >
-                    {subSection.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 그외/새로운 통증 섹션일 때 서브 섹션 탭 표시 - 메인 탭 바로 아래에 수평으로 팝업 */}
       {currentCategory === 'new_pain' && (
-        <div className="absolute left-[572px] top-[111px] animate-fade-in-slide">
+        <div className="absolute left-[380px] top-[111px] animate-fade-in-slide">
           {/* 서브 섹션 카드 - 일반 직사각형 둥근 모서리, 수평 배치 */}
           <div className="bg-white rounded-xl shadow-lg border border-zinc-300 px-4 py-3">
             {/* 서브 섹션 버튼들 - 가로로 배치 */}
@@ -655,7 +489,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
 
       {/* 부작용 섹션일 때 서브 섹션 탭 */}
       {currentCategory === 'side_effects' && (
-        <div className="absolute left-[828px] top-[111px] animate-fade-in-slide">
+        <div className="absolute left-[700px] top-[111px] animate-fade-in-slide">
           <div className="bg-white rounded-xl shadow-lg border border-zinc-300 px-4 py-3">
             <div className="flex gap-3">
               {sideEffectSubSections.map((subSection, index) => {
@@ -697,7 +531,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
 
       {/* 기타 섹션일 때 서브 섹션 탭 */}
       {currentCategory === 'additional_questions' && (
-        <div className="absolute left-[1083px] top-[111px] animate-fade-in-slide">
+        <div className="absolute left-[1019px] top-[111px] animate-fade-in-slide">
           <div className="bg-white rounded-xl shadow-lg border border-zinc-300 px-4 py-3">
             <div className="flex gap-3">
               {additionalSubSections.map((subSection, index) => {
@@ -739,7 +573,7 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
 
       {/* 주요 진단 내용 섹션일 때 서브 섹션 탭 표시 - 메인 탭 바로 아래에 수평으로 팝업 */}
       {currentCategory === 'main_diagnosis' && (
-        <div className="absolute left-[316px] top-[111px] animate-fade-in-slide">
+        <div className="absolute left-[60px] top-[111px] animate-fade-in-slide">
           {/* 서브 섹션 카드 - 일반 직사각형 둥근 모서리, 수평 배치 */}
           <div className="bg-white rounded-xl shadow-lg border border-zinc-300 px-4 py-3">
             {/* 서브 섹션 버튼들 - 가로로 배치 */}
@@ -812,10 +646,6 @@ export default function ChatInterface({ patientInfo }: ChatInterfaceProps) {
                 <div className="self-stretch justify-start text-black text-[26px] font-normal font-inter">
                   {currentCategory === null
                     ? `${patientDisplayName}, 메인 섹션을 선택해주세요.`
-                    : currentCategory === 'basic_info' && currentSubSection
-                    ? `${categoryLabels[currentCategory]} - ${basicInfoSubSections.find(s => s.key === currentSubSection)?.label}을(를) 작업중입니다 ...`
-                    : currentCategory === 'basic_info'
-                    ? `${categoryLabels[currentCategory]}을(를) 작업중입니다 ...`
                     : currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection
                     ? `${categoryLabels[currentCategory]} - ${mainDiagnosisSubSections.find(s => s.key === currentMainDiagnosisSubSection)?.label}(를) 작업중입니다 ...`
                     : currentCategory === 'main_diagnosis'

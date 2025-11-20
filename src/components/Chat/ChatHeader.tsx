@@ -4,29 +4,30 @@ interface ChatHeaderProps {
   currentCategory: Category | null;
   onCategoryChange: (category: Category) => void;
   maxReachedIndex: number;
-  isBasicInfoComplete: boolean;
   isMainDiagnosisComplete: boolean;
   isNewPainComplete: boolean;
   isSideEffectsComplete: boolean;
 }
 
 const categories: { key: Category; label: string }[] = [
-  { key: 'basic_info', label: '기본 정보' },
   { key: 'main_diagnosis', label: '주요 진단 내용' },
   { key: 'new_pain', label: '그외/새로운 통증' },
   { key: 'side_effects', label: '부작용' },
   { key: 'additional_questions', label: '기타' },
 ];
 
-export default function ChatHeader({ currentCategory, onCategoryChange, maxReachedIndex, isBasicInfoComplete, isMainDiagnosisComplete, isNewPainComplete, isSideEffectsComplete }: ChatHeaderProps) {
+export default function ChatHeader({ currentCategory, onCategoryChange, maxReachedIndex, isMainDiagnosisComplete, isNewPainComplete, isSideEffectsComplete }: ChatHeaderProps) {
   const getTabPosition = (index: number) => {
-    // 새로운 디자인에 맞춘 정확한 위치
+    // 계산: 채팅창 왼쪽(60px) ~ 바디 이미지창 오른쪽(1307px) 사이에 박스 4개 균등 배치
+    // 박스 너비: 288px (w-72)
+    // 첫 번째 박스 left: 60px
+    // 네 번째 박스 right: 1307px → left: 1307 - 288 = 1019px
+    // 간격 = (1019 - 60 - 288 * 3) / 3 = (1019 - 60 - 864) / 3 = 95 / 3 = 31.67px
     const positions = [
-      { left: '60px' },    // 기본 정보
-      { left: '316px' },   // 주요 진단 내용
-      { left: '572px' },   // 그외/새로운 통증
-      { left: '828px' },   // 부작용
-      { left: '1083px' },  // 추가 질문
+      { left: '60px' },      // 주요 진단 내용: 60px
+      { left: '380px' },     // 그외/새로운 통증: 60 + 288 + 32 = 380px
+      { left: '700px' },     // 부작용: 380 + 288 + 32 = 700px
+      { left: '1019px' },    // 기타: 700 + 288 + 31 = 1019px (오른쪽: 1019 + 288 = 1307px)
     ];
     return positions[index];
   };
@@ -37,10 +38,10 @@ export default function ChatHeader({ currentCategory, onCategoryChange, maxReach
         const position = getTabPosition(index);
         const isActive = currentCategory === category.key;
         const isReachable = index === 0 || (index <= maxReachedIndex + 1 && (
-          index === 1 ? isBasicInfoComplete :
-          index === 2 ? isMainDiagnosisComplete :
-          index === 3 ? isNewPainComplete :
-          index === 4 ? isSideEffectsComplete :
+          index === 0 ? true : // 주요 진단 내용은 항상 접근 가능
+          index === 1 ? isMainDiagnosisComplete :
+          index === 2 ? isNewPainComplete :
+          index === 3 ? isSideEffectsComplete :
           true
         ));
         const isDisabled = !isReachable;
@@ -56,9 +57,9 @@ export default function ChatHeader({ currentCategory, onCategoryChange, maxReach
               }
             }}
             disabled={isDisabled && maxReachedIndex !== -1} // 초기 상태에서는 disabled 속성 제거
-            className={`absolute top-[20px] w-56 h-20 px-6 py-6 rounded-xl outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex flex-col justify-between items-start overflow-hidden transition-all duration-300 ${
+            className={`absolute top-[40px] w-72 px-8 py-4 rounded-[20px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex flex-col justify-start items-start gap-3 overflow-hidden transition-all duration-300 ${
               isActive
-                ? 'bg-orange-200 text-black'
+                ? 'bg-white/70 text-black'
                 : isWhite
                 ? isDisabled
                   ? 'bg-white text-black cursor-not-allowed opacity-50'
@@ -70,7 +71,7 @@ export default function ChatHeader({ currentCategory, onCategoryChange, maxReach
             style={{ left: position.left }}
           >
             <div className="self-stretch inline-flex justify-start items-center gap-3">
-              <div className="flex-1 text-center justify-start text-black text-2xl font-bold font-inter">
+              <div className="flex-1 justify-start text-black text-2xl font-medium font-inter">
                 {category.label}
               </div>
             </div>
