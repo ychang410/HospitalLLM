@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { analyzeMedicalRecord, MedicalRecordAnalysis } from '../services/gpt';
 
 interface MedicalRecordUploadProps {
-  onUploadComplete: (file: File | null, recordId: string | null) => void;
+  onUploadComplete: (file: File | null, recordId: string | null, analysis?: MedicalRecordAnalysis) => void;
 }
 
 export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordUploadProps) {
@@ -11,6 +12,7 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [medicalRecordId, setMedicalRecordId] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<MedicalRecordAnalysis | null>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -39,7 +41,7 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!selectedFile) return;
 
     setIsUploading(true);
@@ -49,20 +51,41 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
     setMedicalRecordId(recordId);
     
     // 업로드 시뮬레이션
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsUploading(false);
       setIsAnalyzing(true);
       
-      // LLM 분석 시뮬레이션 (2초 대기)
-      setTimeout(() => {
+      try {
+        // GPT를 사용한 진료 기록 분석
+        const analysis = await analyzeMedicalRecord(selectedFile);
+        setAnalysisResult(analysis);
+        console.log('진료 기록 분석 결과:', analysis);
+        
+        // 분석 결과를 로컬 파일로 저장
+        const analysisJson = JSON.stringify(analysis, null, 2);
+        const blob = new Blob([analysisJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `medical_record_analysis_${Date.now()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
         setIsAnalyzing(false);
         setAnalysisComplete(true);
-      }, 2000);
+      } catch (error: any) {
+        console.error('진료 기록 분석 오류:', error);
+        alert(`분석 중 오류가 발생했습니다: ${error.message}`);
+        setIsAnalyzing(false);
+        setIsUploading(false);
+      }
     }, 500);
   };
 
   const handleStudyStart = () => {
-    onUploadComplete(selectedFile, medicalRecordId);
+    onUploadComplete(selectedFile, medicalRecordId, analysisResult || undefined);
   };
 
   return (
@@ -89,7 +112,7 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
                 분석이 완료되었습니다.
               </div>
               <div className="text-black text-xl font-normal font-inter text-gray-600 mb-4">
-                진료 기록 분석이 완료되었습니다. 이제 연구를 시작할 수 있습니다.
+                진료 기록 분석이 완료되었습니다. 분석 결과는 자동으로 다운로드되었습니다.
               </div>
             </>
           ) : isAnalyzing ? (

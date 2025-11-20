@@ -2,6 +2,7 @@ import { useState } from 'react'
 import MedicalRecordUpload from './components/MedicalRecordUpload'
 import PatientInfoForm from './components/PatientInfoForm'
 import ChatInterface from './components/ChatInterface'
+import { MedicalRecordAnalysis } from './services/gpt'
 
 export interface PatientInfo {
   name: string;
@@ -15,13 +16,17 @@ export interface PatientInfo {
 function App() {
   const [medicalRecord, setMedicalRecord] = useState<File | null>(null);
   const [medicalRecordId, setMedicalRecordId] = useState<string | null>(null);
+  const [medicalRecordAnalysis, setMedicalRecordAnalysis] = useState<MedicalRecordAnalysis | null>(null);
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
 
-  const handleUploadComplete = (file: File | null, recordId: string | null) => {
+  const handleUploadComplete = (file: File | null, recordId: string | null, analysis?: MedicalRecordAnalysis) => {
     setMedicalRecord(file);
     setMedicalRecordId(recordId);
+    if (analysis) {
+      setMedicalRecordAnalysis(analysis);
+    }
   };
 
   const handlePatientInfoSubmit = (info: PatientInfo) => {
@@ -49,6 +54,7 @@ function App() {
         medicalRecord={medicalRecord}
         patientId={patientId!}
         medicalRecordId={medicalRecordId!}
+        medicalRecordAnalysis={medicalRecordAnalysis}
       />
     </div>
   );

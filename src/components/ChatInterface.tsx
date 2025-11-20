@@ -1,16 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { PatientInfo } from '../App';
 import ChatHeader from './Chat/ChatHeader';
 import MessageBubble from './Chat/MessageBubble';
 import ChatInput from './Chat/ChatInput';
 import HumanModel3D from './HumanModel/HumanModel3D';
 import scripts from '../data/scripts.json';
+import { MedicalRecordAnalysis } from '../services/gpt';
 
 interface ChatInterfaceProps {
   patientInfo: PatientInfo;
   medicalRecord: File | null;
   patientId: string;
   medicalRecordId: string;
+  medicalRecordAnalysis: MedicalRecordAnalysis | null;
 }
 
 export type Category = 'main_diagnosis' | 'new_pain' | 'side_effects' | 'additional_questions';
@@ -22,13 +24,6 @@ export type SideEffectSubSection = 'medication';
 export type AdditionalSubSection = 'additional_question';
 
 export const categoryOrder: Category[] = ['main_diagnosis', 'new_pain', 'side_effects', 'additional_questions'];
-
-export const mainDiagnosisSubSections: { key: MainDiagnosisSubSection; label: string }[] = [
-  { key: 'diagnosis_a', label: '증상 A' },
-  { key: 'diagnosis_b', label: '증상 B' },
-  { key: 'diagnosis_c', label: '증상 C' },
-  { key: 'examination', label: '검사' },
-];
 
 export const newPainSubSections: { key: NewPainSubSection; label: string }[] = [
   { key: 'other_pain', label: '그 외 통증' },
@@ -57,7 +52,7 @@ const categoryLabels: Record<Category, string> = {
   'additional_questions': '기타',
 };
 
-export default function ChatInterface({ patientInfo, medicalRecord, patientId, medicalRecordId }: ChatInterfaceProps) {
+export default function ChatInterface({ patientInfo, medicalRecord, patientId, medicalRecordId, medicalRecordAnalysis }: ChatInterfaceProps) {
   const [currentCategory, setCurrentCategory] = useState<Category>('main_diagnosis'); // 초기에는 주요 진단 내용 선택
   const [maxReachedIndex, setMaxReachedIndex] = useState<number>(0); // 초기에는 주요 진단 내용까지 도달
   const [currentMainDiagnosisSubSection, setCurrentMainDiagnosisSubSection] = useState<MainDiagnosisSubSection | null>(null);
@@ -75,6 +70,29 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
 
   const patientDisplayName = patientInfo?.name ? `${patientInfo.name}님` : '환자님';
   const patientName = patientInfo?.name || '환자';
+
+  // 분석 결과를 기반으로 주요 진단 내용 서브섹션 라벨 동적 생성
+  const mainDiagnosisSubSections = useMemo(() => {
+    const sections: { key: MainDiagnosisSubSection; label: string }[] = [];
+    
+    if (medicalRecordAnalysis?.symptoms && medicalRecordAnalysis.symptoms.length >= 3) {
+      sections.push(
+        { key: 'diagnosis_a', label: medicalRecordAnalysis.symptoms[0].name },
+        { key: 'diagnosis_b', label: medicalRecordAnalysis.symptoms[1].name },
+        { key: 'diagnosis_c', label: medicalRecordAnalysis.symptoms[2].name }
+      );
+    } else {
+      // 분석 결과가 없으면 기본값 사용
+      sections.push(
+        { key: 'diagnosis_a', label: '증상 A' },
+        { key: 'diagnosis_b', label: '증상 B' },
+        { key: 'diagnosis_c', label: '증상 C' }
+      );
+    }
+    
+    sections.push({ key: 'examination', label: '검사' });
+    return sections;
+  }, [medicalRecordAnalysis]);
   // 서브섹션별로 메시지를 저장 (key: "category_subsection" 또는 "greeting")
   const [messagesBySection, setMessagesBySection] = useState<Map<string, Message[]>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -423,7 +441,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
     });
 
     // TODO: GPT API 호출하여 응답 받기
-    // LLM이 메시지를 생성하므로 여기서는 상태만 업데이트
+    // src/services/gpt.ts의 callGPTAPI 함수를 사용하여 GPT 응답을 받을 수 있습니다.
     
   };
 
