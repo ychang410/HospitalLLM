@@ -2,7 +2,7 @@ import { useState } from 'react'
 import MedicalRecordUpload from './components/MedicalRecordUpload'
 import PatientInfoForm from './components/PatientInfoForm'
 import ChatInterface from './components/ChatInterface'
-import { MedicalRecordAnalysis } from './services/gpt'
+import { MedicalRecordAnalysis } from './services/gpt-common'
 
 export interface PatientInfo {
   name: string;

@@ -1,123 +1,9 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// PDF.js worker 설정
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
-export interface GPTMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-export interface GPTResponse {
-  id: string;
-  choices: Array<{
-    message: {
-      role: string;
-      content: string;
-    };
-  }>;
-}
+import { callGPTAPI, GPTMessage, MedicalRecordAnalysis, extractTextFromPDF } from './gpt-common';
 
 /**
- * 진료 기록 분석 결과
- */
-export interface MedicalRecordAnalysis {
-  mainDiagnosis: string; // 주요 진단명
-  symptoms: Array<{
-    name: string; // 주요 진단명과 관련된 일반적인 증상명
-    mentioned: boolean; // 진료 기록에서 언급되었는지 여부
-  }>;
-  otherSymptoms: Array<{
-    name: string; // 주요 진단명과 관련 없는 기타 증상명
-    mentioned: boolean; // 진료 기록에서 언급되었는지 여부 (항상 true)
-  }>;
-  examinations: Array<{
-    name: string; // 검사 이름
-  }>; // 검사 목록 (없으면 빈 배열)
-  medications: Array<{
-    name: string; // 약 이름
-  }>; // 처방약 목록 (없으면 빈 배열)
-}
-
-/**
- * GPT API를 호출하여 응답을 받습니다.
- * @param messages 대화 메시지 배열
- * @returns GPT 응답 메시지
- */
-export async function callGPTAPI(messages: GPTMessage[]): Promise<string> {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('OpenAI API 키가 설정되지 않았습니다. .env 파일에 VITE_OPENAI_API_KEY를 설정해주세요.');
-  }
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o', // 또는 'gpt-3.5-turbo', 'gpt-4' 등
-        messages: messages,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API 오류: ${response.status} ${response.statusText}`);
-    }
-
-    const data: GPTResponse = await response.json();
-    
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error('GPT API에서 응답을 받지 못했습니다.');
-    }
-
-    return data.choices[0].message.content;
-  } catch (error: any) {
-    console.error('GPT API 호출 오류:', error);
-    throw error;
-  }
-}
-
-/**
- * PDF 파일에서 텍스트를 추출합니다.
- * @param file PDF 파일
- * @returns 추출된 텍스트
- */
-async function extractTextFromPDF(file: File): Promise<string> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
-    let fullText = '';
-    
-    // 모든 페이지에서 텍스트 추출
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      
-      // 텍스트 항목들을 하나의 문자열로 결합
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      
-      fullText += pageText + '\n';
-    }
-    
-    return fullText.trim();
-  } catch (error: any) {
-    throw new Error(`PDF 파일 읽기 실패: ${error.message}`);
-  }
-}
-
-/**
- * 진료 기록 파일을 읽고 요약합니다. (테스트용)
+ * 진료 기록 파일을 분석합니다.
  * @param file 진료 기록 파일 (텍스트, PDF 등)
- * @returns 요약 텍스트
+ * @returns 분석 결과
  */
 export async function analyzeMedicalRecord(file: File): Promise<MedicalRecordAnalysis> {
   // 파일 내용 읽기
@@ -145,11 +31,12 @@ export async function analyzeMedicalRecord(file: File): Promise<MedicalRecordAna
   const prompt = `다음은 환자의 진료 기록입니다. 이 기록을 분석하여 다음 정보를 JSON 형식으로 제공해주세요:
 
 1. 주요 진단명 (mainDiagnosis): 진료 기록에서 가장 중요한 진단명을 하나 추출하세요.
-2. 주요 증상 (symptoms): 해당 진단명의 대표적인 주요 증상 3개를 나열하세요 (common symptoms). 증상명은 반드시 전문적인 의학 용어를 사용하세요. (예: "다리에 힘빠짐" → "다리 근력 저하" 등)
+2. 주요 증상 (symptoms): 진료 기록에 적혀있는 증상을 무시하고, 해당 진단명의 대표적인 주요 증상 3개를 나열하세요 (common symptoms). 증상명은 반드시 전문적인 의학 용어를 사용하세요. (예: "다리에 힘빠짐" → "다리 근력 저하" 등)
 3. 각 증상의 언급 여부 (mentioned): 각 증상이 진료 기록에서 언급되었는지 true/false로 표시하세요.
-4. 기타 증상 (otherSymptoms): 진료 기록에서 언급되었지만 주요 진단명과 관련 없는 기타 증상들을 나열하세요. (없으면 빈 배열) 증상명은 반드시 전문적인 의학 용어를 사용하세요.
-5. 검사 (examinations): 진료 기록에서 언급된 검사들을 나열하세요. (없으면 빈 배열)
-6. 처방약 (medications): 진료 기록에서 언급된 처방약들을 나열하세요. (없으면 빈 배열)
+4. 각 증상의 유무 (present): mentioned가 true인 경우, 해당 증상이 있다고 했는지(present: true) 아니면 없다고 했는지(present: false)를 판단하세요. mentioned가 false인 경우 present는 false로 설정하세요.
+5. 기타 증상 (otherSymptoms): 진료 기록에서 언급되었지만 주요 진단명과 관련 없는 기타 증상들을 나열하세요. (없으면 빈 배열) 증상명은 반드시 전문적인 의학 용어를 사용하세요.
+6. 검사 (examinations): 진료 기록에서 언급된 검사들을 나열하세요. (없으면 빈 배열)
+7. 처방약 (medications): 진료 기록에서 언급된 처방약들을 나열하세요. (없으면 빈 배열)
 
 응답은 반드시 다음 JSON 형식으로만 제공해주세요. 다른 설명이나 텍스트 없이 JSON만 제공하세요:
 {
@@ -157,15 +44,18 @@ export async function analyzeMedicalRecord(file: File): Promise<MedicalRecordAna
   "symptoms": [
     {
       "name": "증상1",
-      "mentioned": true 또는 false
+      "mentioned": true 또는 false,
+      "present": true 또는 false
     },
     {
       "name": "증상2",
-      "mentioned": true 또는 false
+      "mentioned": true 또는 false,
+      "present": true 또는 false
     },
     {
       "name": "증상3",
-      "mentioned": true 또는 false
+      "mentioned": true 또는 false,
+      "present": true 또는 false
     }
   ],
   "otherSymptoms": [
@@ -266,6 +156,13 @@ ${fileContent.substring(0, 10000)}`; // 파일 크기 제한
       }
       if (typeof symptom.mentioned !== 'boolean') {
         throw new Error('증상 mentioned가 boolean이 아닙니다.');
+      }
+      if (typeof symptom.present !== 'boolean') {
+        throw new Error('증상 present가 boolean이 아닙니다.');
+      }
+      // mentioned가 false이면 present는 false여야 함
+      if (!symptom.mentioned && symptom.present) {
+        throw new Error('mentioned가 false인 경우 present는 false여야 합니다.');
       }
     }
     
