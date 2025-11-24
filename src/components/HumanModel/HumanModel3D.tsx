@@ -48,7 +48,7 @@ export const bodyPartPositions: Record<Exclude<BodyPart, 'leg' | 'back' | 'hip' 
   wrist: [{ x: 0.25, y: 0.55 }, { x: 0.75, y: 0.55 }],
   hand: [{ x: 0.14, y: 0.51 }, { x: 0.87, y: 0.51 }],
   chest: [{ x: 0.5, y: 0.35 }],
-  abdomen: [{ x: 0.5, y: 0.45 }],
+  abdomen: [{ x: 0.505, y: 0.42 }],
   lower_back: [{ x: 0.5, y: 0.55 }],
   thigh: [{ x: 0.41, y: 0.57 }, { x: 0.6, y: 0.57 }],
   knee: [{ x: 0.41, y: 0.65 }, { x: 0.6, y: 0.65 }],

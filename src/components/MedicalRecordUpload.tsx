@@ -151,10 +151,44 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
     onUploadComplete(selectedFile, medicalRecordId, finalAnalysis || undefined);
   };
 
-  const handleSaveChanges = () => {
-    // 분석 결과를 로컬 파일로 저장
-    if (editableAnalysis) {
-      const analysisJson = JSON.stringify(editableAnalysis, null, 2);
+  const handleSaveChanges = async () => {
+    if (!editableAnalysis) return;
+    
+    // 편집된 otherSymptoms의 바디 파트를 다시 계산
+    setIsCalculatingBodyParts(true);
+    
+    try {
+      const updatedOtherSymptoms = await Promise.all(
+        editableAnalysis.otherSymptoms.map(async (otherSymptom) => {
+          // 증상명이 비어있으면 스킵
+          if (!otherSymptom.name || otherSymptom.name.trim() === '') {
+            return otherSymptom;
+          }
+          
+          try {
+            const bodyPart = await determineBodyPartForSymptom(
+              otherSymptom.name,
+              editableAnalysis.mainDiagnosis
+            );
+            return { ...otherSymptom, bodyPart };
+          } catch (error) {
+            console.error(`기타 증상 "${otherSymptom.name}"의 bodyPart 계산 실패:`, error);
+            return otherSymptom; // 오류 발생 시 원본 유지
+          }
+        })
+      );
+
+      // 바디 파트가 계산된 분석 결과로 업데이트
+      const updatedAnalysis = {
+        ...editableAnalysis,
+        otherSymptoms: updatedOtherSymptoms,
+      };
+      
+      setEditableAnalysis(updatedAnalysis);
+      setAnalysisResult(updatedAnalysis); // 원본도 업데이트
+      
+      // 분석 결과를 로컬 파일로 저장
+      const analysisJson = JSON.stringify(updatedAnalysis, null, 2);
       const blob = new Blob([analysisJson], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -164,8 +198,14 @@ export default function MedicalRecordUpload({ onUploadComplete }: MedicalRecordU
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      
+      setIsCalculatingBodyParts(false);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('바디 파트 계산 오류:', error);
+      setIsCalculatingBodyParts(false);
+      alert('바디 파트 계산 중 오류가 발생했습니다.');
     }
-    setIsEditing(false);
   };
 
   const handleCancelEdit = () => {

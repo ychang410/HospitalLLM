@@ -7,6 +7,7 @@ interface ChatHeaderProps {
   isMainDiagnosisComplete: boolean;
   isNewPainComplete: boolean;
   isSideEffectsComplete: boolean;
+  testMode?: boolean; // 테스트 모드: 모든 탭 클릭 가능
 }
 
 const categories: { key: Category; label: string }[] = [
@@ -16,7 +17,7 @@ const categories: { key: Category; label: string }[] = [
   { key: 'additional_questions', label: '기타' },
 ];
 
-export default function ChatHeader({ currentCategory, onCategoryChange, maxReachedIndex, isMainDiagnosisComplete, isNewPainComplete, isSideEffectsComplete }: ChatHeaderProps) {
+export default function ChatHeader({ currentCategory, onCategoryChange, maxReachedIndex, isMainDiagnosisComplete, isNewPainComplete, isSideEffectsComplete, testMode = false }: ChatHeaderProps) {
   const getTabPosition = (index: number) => {
     // 계산: 채팅창 왼쪽(60px) ~ 바디 이미지창 오른쪽(1307px) 사이에 박스 4개 균등 배치
     // 박스 너비: 288px (w-72)
@@ -37,7 +38,8 @@ export default function ChatHeader({ currentCategory, onCategoryChange, maxReach
       {categories.map((category, index) => {
         const position = getTabPosition(index);
         const isActive = currentCategory === category.key;
-        const isReachable = index === 0 || (index <= maxReachedIndex + 1 && (
+        // 테스트 모드에서는 모든 탭 클릭 가능
+        const isReachable = testMode || index === 0 || (index <= maxReachedIndex + 1 && (
           index === 0 ? true : // 주요 진단 내용은 항상 접근 가능
           index === 1 ? isMainDiagnosisComplete :
           index === 2 ? isNewPainComplete :
@@ -52,11 +54,11 @@ export default function ChatHeader({ currentCategory, onCategoryChange, maxReach
           <button
             key={category.key}
             onClick={() => {
-              if (isReachable) {
+              if (testMode || isReachable) {
                 onCategoryChange(category.key);
               }
             }}
-            disabled={isDisabled && maxReachedIndex !== -1} // 초기 상태에서는 disabled 속성 제거
+            disabled={!testMode && isDisabled && maxReachedIndex !== -1} // 테스트 모드에서는 disabled 비활성화
             className={`absolute top-[40px] w-72 px-8 py-4 rounded-[20px] outline outline-1 outline-offset-[-1px] outline-zinc-300 inline-flex flex-col justify-start items-start gap-3 overflow-hidden transition-all duration-300 ${
               isActive
                 ? 'bg-white/70 text-black'
