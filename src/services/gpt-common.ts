@@ -1,11 +1,11 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import { BodyPart } from '../components/HumanModel/HumanModel3D';
+import * as pdfjsLib from "pdfjs-dist";
+import { BodyPart } from "../components/HumanModel/HumanModel3D";
 
 // PDF.js worker 설정
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export interface GPTMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
 }
 
@@ -52,21 +52,23 @@ export interface MedicalRecordAnalysis {
  */
 export async function callGPTAPI(
   messages: GPTMessage[],
-  model: string = 'gpt-4o',
+  model: string = "gpt-4o",
   temperature: number = 0.7
 ): Promise<string> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  
+
   if (!apiKey) {
-    throw new Error('OpenAI API 키가 설정되지 않았습니다. .env 파일에 VITE_OPENAI_API_KEY를 설정해주세요.');
+    throw new Error(
+      "OpenAI API 키가 설정되지 않았습니다. .env 파일에 VITE_OPENAI_API_KEY를 설정해주세요."
+    );
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: model,
@@ -77,18 +79,21 @@ export async function callGPTAPI(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API 오류: ${response.status} ${response.statusText}`);
+      throw new Error(
+        errorData.error?.message ||
+          `API 오류: ${response.status} ${response.statusText}`
+      );
     }
 
     const data: GPTResponse = await response.json();
-    
+
     if (!data.choices || data.choices.length === 0) {
-      throw new Error('GPT API에서 응답을 받지 못했습니다.');
+      throw new Error("GPT API에서 응답을 받지 못했습니다.");
     }
 
     return data.choices[0].message.content;
   } catch (error: any) {
-    console.error('GPT API 호출 오류:', error);
+    console.error("GPT API 호출 오류:", error);
     throw error;
   }
 }
@@ -102,22 +107,20 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    
-    let fullText = '';
-    
+
+    let fullText = "";
+
     // 모든 페이지에서 텍스트 추출
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      
+
       // 텍스트 항목들을 하나의 문자열로 결합
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      
-      fullText += pageText + '\n';
+      const pageText = textContent.items.map((item: any) => item.str).join(" ");
+
+      fullText += pageText + "\n";
     }
-    
+
     return fullText.trim();
   } catch (error: any) {
     throw new Error(`PDF 파일 읽기 실패: ${error.message}`);
@@ -131,9 +134,13 @@ export async function extractTextFromPDF(file: File): Promise<string> {
  * @param birthDay 출생 일
  * @returns 나이
  */
-export function calculateAge(birthYear: string, birthMonth: string, birthDay: string): number {
+export function calculateAge(
+  birthYear: string,
+  birthMonth: string,
+  birthDay: string
+): number {
   if (!birthYear || !birthMonth || !birthDay) return 0;
-  
+
   const birthDate = new Date(
     parseInt(birthYear),
     parseInt(birthMonth) - 1,
@@ -142,11 +149,13 @@ export function calculateAge(birthYear: string, birthMonth: string, birthDay: st
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
     age--;
   }
-  
+
   return age;
 }
-
