@@ -15,3 +15,8 @@ declare module '*.svg' {
   export default src;
 }
 
+declare module '*.json' {
+  const value: any;
+  export default value;
+}
+
