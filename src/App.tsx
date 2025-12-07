@@ -89,57 +89,54 @@ function App() {
   };
 
   // 개발 중: Summary 페이지만 표시
-  return <SummaryPage onComplete={handleSummaryComplete} />;
+  // return <SummaryPage onComplete={handleSummaryComplete} />;
 
   // 1단계: 진료 기록 업로드 및 분석
-  // if (!medicalRecordId) {
-  //   return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
-  // }
+  if (!medicalRecordId) {
+    return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
+  }
 
   // 2단계: 환자 정보 입력
-  // if (!showChat) {
-  //   return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
-  // }
+  if (!showChat) {
+    return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
+  }
 
   // 3단계: 챗봇 인터페이스
-  // if (showChat) {
-  //   return (
-  //     <div className="w-full h-screen flex items-center justify-center bg-gray-50">
-  //       <ChatInterface
-  //         patientInfo={patientInfo!}
-  //         medicalRecord={medicalRecord}
-  //         patientId={patientId!}
-  //         medicalRecordId={medicalRecordId!}
-  //         medicalRecordAnalysis={medicalRecordAnalysis}
-  //         onConversationComplete={handleConversationComplete}
-  //       />
-  //     </div>
-  //   );
-  // }
+  if (showChat) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50">
+        <ChatInterface
+          patientInfo={patientInfo!}
+          medicalRecord={medicalRecord}
+          patientId={patientId!}
+          medicalRecordId={medicalRecordId!}
+          medicalRecordAnalysis={medicalRecordAnalysis}
+          onConversationComplete={handleConversationComplete}
+        />
+      </div>
+    );
+  }
 
   // 4단계: 분석 중 페이지
-  // if (showAnalysis && patientInfo) {
-  //   return (
-  //     <AnalysisPage
-  //       patientInfo={patientInfo}
-  //       onComplete={handleAnalysisComplete}
-  //     />
-  //   );
-  // }
+  if (showAnalysis && patientInfo) {
+    return (
+      <AnalysisPage
+        patientInfo={patientInfo}
+        onComplete={handleAnalysisComplete}
+      />
+    );
+  }
 
   // 5단계: 요약 페이지
-  // if (showSummary && patientInfo && patientId && medicalRecordId) {
-  //   return (
-  //     <SummaryPage
-  //       patientInfo={patientInfo}
-  //       patientId={patientId}
-  //       medicalRecordId={medicalRecordId}
-  //       onComplete={handleSummaryComplete}
-  //     />
-  //   );
-  // }
+  if (showSummary) {
+    return (
+      <SummaryPage
+        onComplete={handleSummaryComplete}
+      />
+    );
+  }
 
-  // return null;
+  return null;
 }
 
 export default App;
