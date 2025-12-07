@@ -5,52 +5,48 @@ import {
   generateSummary,
   StructuredSummary,
   SymptomStatusItem,
-  SymptomTrend,
 } from "../services/gpt-summary";
 import HumanModel3D, {
   BodyPart,
   SymptomStatus,
 } from "./HumanModel/HumanModel3D";
-
-const bodyPartLabels: Record<BodyPart, string> = {
-  head: "머리",
-  neck: "목",
-  shoulder: "어깨",
-  arm: "팔",
-  elbow: "팔꿈치",
-  wrist: "손목",
-  hand: "손",
-  chest: "가슴",
-  abdomen: "복부",
-  back: "등",
-  lower_back: "허리",
-  hip: "엉덩이·골반",
-  leg: "다리",
-  thigh: "허벅지",
-  knee: "무릎",
-  ankle: "발목",
-  foot: "발",
-};
+import DoctorPage from "./DoctorPage";
 
 interface SummaryPageProps {
   onComplete?: () => void;
 }
 
+type SymptomCategory =
+  | "mainDiagnosisSymptoms"
+  | "knownSymptoms"
+  | "newSymptoms";
+
+interface SymptomItemWithCategory extends SymptomStatusItem {
+  category: SymptomCategory;
+  originalIndex: number;
+}
+
+type EditingState =
+  | {
+      type: "symptom";
+      category: SymptomCategory;
+      index: number;
+      symptom: string;
+      details: string;
+    }
+  | {
+      type: "note";
+      index: number;
+      text: string;
+    }
+  | null;
+
 export default function SummaryPage({ onComplete }: SummaryPageProps) {
   const [summary, setSummary] = useState<StructuredSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingSymptom, setEditingSymptom] = useState<{
-    section: SymptomTrend | "new";
-    index: number;
-  } | null>(null);
-  const [symptomDraft, setSymptomDraft] = useState<SymptomStatusItem>({
-    symptom: "",
-    details: "",
-    bodyPart: undefined,
-  });
-  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
+  const [showDoctorPage, setShowDoctorPage] = useState(false);
+  const [editingState, setEditingState] = useState<EditingState>(null);
 
   useEffect(() => {
     const loadAndGenerateSummary = async () => {
@@ -69,19 +65,100 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
     loadAndGenerateSummary();
   }, []);
 
+  // progress 값에 따라 증상을 분류 (카테고리 정보 포함)
+  const getSymptomStatusItems = useMemo(() => {
+    if (!summary) {
+      return {
+        worse: [] as SymptomItemWithCategory[],
+        same: [] as SymptomItemWithCategory[],
+        better: [] as SymptomItemWithCategory[],
+        newSymptoms: [] as SymptomItemWithCategory[],
+        noSymptom: [] as SymptomItemWithCategory[],
+      };
+    }
+
+    const worse: SymptomItemWithCategory[] = [];
+    const same: SymptomItemWithCategory[] = [];
+    const better: SymptomItemWithCategory[] = [];
+    const newSymptoms: SymptomItemWithCategory[] = [];
+    const noSymptom: SymptomItemWithCategory[] = [];
+
+    // mainDiagnosisSymptoms 처리
+    summary.mainDiagnosisSymptoms.forEach((item, index) => {
+      const itemWithCategory: SymptomItemWithCategory = {
+        ...item,
+        category: "mainDiagnosisSymptoms",
+        originalIndex: index,
+      };
+      if (item.progress === "worse") {
+        worse.push(itemWithCategory);
+      } else if (item.progress === "same") {
+        same.push(itemWithCategory);
+      } else if (item.progress === "better") {
+        better.push(itemWithCategory);
+      } else if (item.progress === "new") {
+        newSymptoms.push(itemWithCategory);
+      } else if (item.progress === "no symptom") {
+        noSymptom.push(itemWithCategory);
+      }
+    });
+
+    // knownSymptoms 처리
+    summary.knownSymptoms.forEach((item, index) => {
+      const itemWithCategory: SymptomItemWithCategory = {
+        ...item,
+        category: "knownSymptoms",
+        originalIndex: index,
+      };
+      if (item.progress === "worse") {
+        worse.push(itemWithCategory);
+      } else if (item.progress === "same") {
+        same.push(itemWithCategory);
+      } else if (item.progress === "better") {
+        better.push(itemWithCategory);
+      } else if (item.progress === "new") {
+        newSymptoms.push(itemWithCategory);
+      } else if (item.progress === "no symptom") {
+        noSymptom.push(itemWithCategory);
+      }
+    });
+
+    // newSymptoms 처리
+    summary.newSymptoms.forEach((item, index) => {
+      const itemWithCategory: SymptomItemWithCategory = {
+        ...item,
+        category: "newSymptoms",
+        originalIndex: index,
+      };
+      if (item.progress === "worse") {
+        worse.push(itemWithCategory);
+      } else if (item.progress === "same") {
+        same.push(itemWithCategory);
+      } else if (item.progress === "better") {
+        better.push(itemWithCategory);
+      } else if (item.progress === "new") {
+        newSymptoms.push(itemWithCategory);
+      } else if (item.progress === "no symptom") {
+        noSymptom.push(itemWithCategory);
+      }
+    });
+
+    return { worse, same, better, newSymptoms, noSymptom };
+  }, [summary]);
+
   const highlightedParts = useMemo(() => {
     if (!summary) return [];
     const combinedItems = [
-      ...summary.symptomStatus.worse,
-      ...summary.symptomStatus.same,
-      ...summary.symptomStatus.better,
-      ...summary.newSymptoms,
+      ...getSymptomStatusItems.worse,
+      ...getSymptomStatusItems.same,
+      ...getSymptomStatusItems.better,
+      ...getSymptomStatusItems.newSymptoms,
     ];
     const parts = combinedItems
       .map((item) => item.bodyPart)
       .filter((part): part is BodyPart => Boolean(part));
     return Array.from(new Set(parts));
-  }, [summary]);
+  }, [summary, getSymptomStatusItems]);
 
   // 각 bodyPart의 상태를 매핑 (우선순위: worse > same > better > new)
   const partStatusMap = useMemo(() => {
@@ -89,27 +166,27 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
     const map = new Map<BodyPart, SymptomStatus>();
 
     // worse 상태 추가
-    summary.symptomStatus.worse.forEach((item) => {
+    getSymptomStatusItems.worse.forEach((item) => {
       if (item.bodyPart) {
         map.set(item.bodyPart, "worse");
       }
     });
 
-    // same 상태 추가 (worse가 아닌 경우만)
-    summary.symptomStatus.same.forEach((item) => {
+    // same 상태 추가
+    getSymptomStatusItems.same.forEach((item) => {
       if (item.bodyPart && !map.has(item.bodyPart)) {
         map.set(item.bodyPart, "same");
       }
     });
 
-    // better 상태 추가 (worse, same이 아닌 경우만)
-    summary.symptomStatus.better.forEach((item) => {
+    // better 상태 추가
+    getSymptomStatusItems.better.forEach((item) => {
       if (item.bodyPart && !map.has(item.bodyPart)) {
         map.set(item.bodyPart, "better");
       }
     });
 
-    // new 상태 추가 (다른 상태가 없는 경우만)
+    // new 상태 추가
     summary.newSymptoms.forEach((item) => {
       if (item.bodyPart && !map.has(item.bodyPart)) {
         map.set(item.bodyPart, "new");
@@ -117,247 +194,226 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
     });
 
     return map;
-  }, [summary]);
+  }, [summary, getSymptomStatusItems]);
 
   const handleComplete = () => {
+    // 의사용 페이지로 이동
+    setShowDoctorPage(true);
+  };
+
+  const handleDoctorPageBack = () => {
+    // 환자 요약 페이지로 돌아가기
+    setShowDoctorPage(false);
+  };
+
+  const handleDoctorPageComplete = () => {
     onComplete?.();
   };
 
-  const openSymptomEditor = (section: SymptomTrend | "new", index: number) => {
+  // 증상 항목 삭제
+  const handleDeleteSymptom = (item: SymptomItemWithCategory) => {
     if (!summary) return;
-    const items =
-      section === "new" ? summary.newSymptoms : summary.symptomStatus[section];
-    const target = items[index];
-    if (!target) return;
-    setEditingSymptom({ section, index });
-    setSymptomDraft({
-      symptom: target.symptom,
-      details: target.details,
-      bodyPart: target.bodyPart ?? undefined,
-    });
-  };
-
-  const closeSymptomEditor = () => {
-    setEditingSymptom(null);
-  };
-
-  const saveSymptomEdit = () => {
-    if (!editingSymptom) return;
-    const sanitized: SymptomStatusItem = {
-      symptom: symptomDraft.symptom.trim(),
-      details: symptomDraft.details.trim(),
-      bodyPart: symptomDraft.bodyPart ?? undefined,
-    };
 
     setSummary((prev) => {
       if (!prev) return prev;
-
-      if (editingSymptom.section === "new") {
-        const updatedNewSymptoms = prev.newSymptoms.map((item, idx) =>
-          idx === editingSymptom.index ? sanitized : item
-        );
-        return {
-          ...prev,
-          newSymptoms: updatedNewSymptoms,
-        };
-      }
-
-      const trend = editingSymptom.section as SymptomTrend;
-      const updatedTrendItems = prev.symptomStatus[trend].map((item, idx) =>
-        idx === editingSymptom.index ? sanitized : item
+      const newSummary = { ...prev };
+      // originalIndex를 사용하여 삭제
+      newSummary[item.category] = newSummary[item.category].filter(
+        (_, index) => index !== item.originalIndex
       );
+      return newSummary;
+    });
+  };
 
+  // 증상 항목 수정 시작
+  const handleEditSymptom = (item: SymptomItemWithCategory) => {
+    setEditingState({
+      type: "symptom",
+      category: item.category,
+      index: item.originalIndex,
+      symptom: item.symptom,
+      details: item.details,
+    });
+  };
+
+  // 증상 항목 수정 저장
+  const handleSaveSymptomEdit = () => {
+    if (!summary || !editingState || editingState.type !== "symptom") return;
+
+    setSummary((prev) => {
+      if (!prev) return prev;
+      const newSummary = { ...prev };
+      const category = editingState.category;
+      const updatedItems = [...newSummary[category]];
+      updatedItems[editingState.index] = {
+        ...updatedItems[editingState.index],
+        symptom: editingState.symptom,
+        details: editingState.details,
+      };
+      newSummary[category] = updatedItems;
+      return newSummary;
+    });
+
+    setEditingState(null);
+  };
+
+  // 증상 항목 수정 취소
+  const handleCancelEdit = () => {
+    setEditingState(null);
+  };
+
+  // Note 삭제
+  const handleDeleteNote = (index: number) => {
+    if (!summary) return;
+    setSummary((prev) => {
+      if (!prev) return prev;
       return {
         ...prev,
-        symptomStatus: {
-          ...prev.symptomStatus,
-          [trend]: updatedTrendItems,
-        },
+        notesForDoctor: prev.notesForDoctor.filter((_, i) => i !== index),
       };
     });
-
-    setEditingSymptom(null);
   };
 
-  const deleteSymptomItem = (section: SymptomTrend | "new", index: number) => {
-    setSummary((prev) => {
-      if (!prev) return prev;
-
-      if (section === "new") {
-        return {
-          ...prev,
-          newSymptoms: prev.newSymptoms.filter((_, idx) => idx !== index),
-        };
-      }
-
-      const trend = section as SymptomTrend;
-      return {
-        ...prev,
-        symptomStatus: {
-          ...prev.symptomStatus,
-          [trend]: prev.symptomStatus[trend].filter((_, idx) => idx !== index),
-        },
-      };
+  // Note 수정 시작
+  const handleEditNote = (index: number, text: string) => {
+    setEditingState({
+      type: "note",
+      index,
+      text,
     });
-
-    if (
-      editingSymptom &&
-      editingSymptom.section === section &&
-      editingSymptom.index === index
-    ) {
-      setEditingSymptom(null);
-    }
   };
 
-  const handleBodyPartSelect = (value: string) => {
-    setSymptomDraft((prev) => ({
-      ...prev,
-      bodyPart: value ? (value as BodyPart) : undefined,
-    }));
-  };
-
-  const startNoteEdit = (index: number) => {
-    if (!summary) return;
-    setEditingNoteIndex(index);
-    setNoteDraft(summary.notesForDoctor[index] ?? "");
-  };
-
-  const cancelNoteEdit = () => {
-    setEditingNoteIndex(null);
-    setNoteDraft("");
-  };
-
-  const saveNoteEdit = () => {
-    if (editingNoteIndex === null) return;
+  // Note 수정 저장
+  const handleSaveNoteEdit = () => {
+    if (!summary || !editingState || editingState.type !== "note") return;
 
     setSummary((prev) => {
       if (!prev) return prev;
-      const updatedNotes = prev.notesForDoctor.map((note, idx) =>
-        idx === editingNoteIndex ? noteDraft.trim() : note
-      );
+      const updatedNotes = [...prev.notesForDoctor];
+      updatedNotes[editingState.index] = editingState.text;
       return {
         ...prev,
         notesForDoctor: updatedNotes,
       };
     });
 
-    setEditingNoteIndex(null);
-    setNoteDraft("");
-  };
-
-  const deleteNote = (index: number) => {
-    setSummary((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        notesForDoctor: prev.notesForDoctor.filter((_, idx) => idx !== index),
-      };
-    });
-
-    if (editingNoteIndex === index) {
-      setEditingNoteIndex(null);
-      setNoteDraft("");
-    }
+    setEditingState(null);
   };
 
   const renderSymptomColumn = (
     title: string,
-    items:
-      | StructuredSummary["symptomStatus"]["worse"]
-      | StructuredSummary["newSymptoms"],
+    items: SymptomItemWithCategory[],
     accent: string,
-    emptyText = "해당 내용이 없습니다.",
-    sectionKey: SymptomTrend | "new"
-  ) => (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h3 className={`text-xl font-semibold mb-3 ${accent}`}>{title}</h3>
-      {items.length > 0 ? (
-        <ul className="space-y-3">
-          {items.map((item, index) => (
-            <li
-              key={`${item.symptom}-${index}`}
-              className="bg-gray-50 rounded-lg p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-gray-900">{item.symptom}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const isEditing =
-                        editingSymptom?.section === sectionKey &&
-                        editingSymptom.index === index;
-                      if (isEditing) {
-                        closeSymptomEditor();
-                      } else {
-                        openSymptomEditor(sectionKey, index);
-                      }
-                    }}
-                    className="text-sm px-3 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
-                  >
-                    {editingSymptom?.section === sectionKey &&
-                    editingSymptom.index === index
-                      ? "취소"
-                      : "수정"}
-                  </button>
-                  <button
-                    onClick={() => deleteSymptomItem(sectionKey, index)}
-                    className="text-sm px-3 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    삭제
-                  </button>
-                </div>
-              </div>
-              {editingSymptom?.section === sectionKey &&
-              editingSymptom.index === index ? (
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-blue-500 focus:outline-none"
-                    value={symptomDraft.symptom}
-                    onChange={(e) =>
-                      setSymptomDraft((prev) => ({
-                        ...prev,
-                        symptom: e.target.value,
-                      }))
-                    }
-                    placeholder="증상 이름"
-                  />
-                  <textarea
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-blue-500 focus:outline-none"
-                    rows={3}
-                    value={symptomDraft.details}
-                    onChange={(e) =>
-                      setSymptomDraft((prev) => ({
-                        ...prev,
-                        details: e.target.value,
-                      }))
-                    }
-                    placeholder="상세 설명"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      onClick={saveSymptomEdit}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-semibold"
-                    >
-                      저장
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-gray-600 text-base leading-relaxed">
-                    {item.details}
-                  </p>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-gray-400 text-base">{emptyText}</p>
-      )}
-    </div>
-  );
+    emptyText = "해당 내용이 없습니다."
+  ) => {
+    const isEditing = (item: SymptomItemWithCategory) => {
+      if (editingState?.type !== "symptom") return false;
+      return (
+        item.category === editingState.category &&
+        item.originalIndex === editingState.index
+      );
+    };
+
+    return (
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h3 className={`text-xl font-semibold mb-3 ${accent}`}>{title}</h3>
+        {items.length > 0 ? (
+          <ul className="space-y-3">
+            {items.map((item, index) => {
+              const editing = isEditing(item);
+
+              return (
+                <li
+                  key={`${item.symptom}-${index}`}
+                  className="bg-gray-50 rounded-lg p-4 space-y-3"
+                >
+                  {editing && editingState?.type === "symptom" ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          증상명
+                        </label>
+                        <input
+                          type="text"
+                          value={editingState.symptom}
+                          onChange={(e) =>
+                            setEditingState({
+                              ...editingState,
+                              symptom: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          상세 설명
+                        </label>
+                        <textarea
+                          value={editingState.details}
+                          onChange={(e) =>
+                            setEditingState({
+                              ...editingState,
+                              details: e.target.value,
+                            })
+                          }
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={handleCancelEdit}
+                          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={handleSaveSymptomEdit}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">
+                            {item.symptom}
+                          </p>
+                          <p className="text-gray-600 text-base leading-relaxed mt-1">
+                            {item.details}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditSymptom(item)}
+                            className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSymptom(item)}
+                            className="px-3 py-1.5 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-gray-400 text-base">{emptyText}</p>
+        )}
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -404,6 +460,19 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
           요약 데이터를 불러올 수 없습니다.
         </div>
       </div>
+    );
+  }
+
+  // 의사용 페이지 표시
+  if (showDoctorPage && summary) {
+    const conversationLog = conversationLogData as ConversationLog;
+    return (
+      <DoctorPage
+        summary={summary}
+        conversationLog={conversationLog}
+        onComplete={handleDoctorPageComplete}
+        onBack={handleDoctorPageBack}
+      />
     );
   }
 
@@ -468,31 +537,27 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
             <div className="flex flex-col gap-4">
               {renderSymptomColumn(
                 "증상이 악화되었어요.",
-                summary.symptomStatus.worse,
+                getSymptomStatusItems.worse,
                 "text-red-600",
-                "해당 내용이 없습니다.",
-                "worse"
+                "해당 내용이 없습니다."
               )}
               {renderSymptomColumn(
                 "증상의 변화가 없어요.",
-                summary.symptomStatus.same,
+                getSymptomStatusItems.same,
                 "text-yellow-600",
-                "해당 내용이 없습니다.",
-                "same"
+                "해당 내용이 없습니다."
               )}
               {renderSymptomColumn(
                 "증상이 나아졌어요.",
-                summary.symptomStatus.better,
+                getSymptomStatusItems.better,
                 "text-green-600",
-                "해당 내용이 없습니다.",
-                "better"
+                "해당 내용이 없습니다."
               )}
               {renderSymptomColumn(
                 "새로운 증상이 생겼어요.",
-                summary.newSymptoms,
+                getSymptomStatusItems.newSymptoms,
                 "text-blue-600",
-                "새롭게 보고된 증상이 없습니다.",
-                "new"
+                "새롭게 보고된 증상이 없습니다."
               )}
             </div>
 
@@ -505,55 +570,64 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
               {summary.notesForDoctor.length > 0 ? (
                 <ul className="space-y-4 text-gray-800">
                   {summary.notesForDoctor.map((note, index) => {
-                    const isEditing = editingNoteIndex === index;
+                    const isEditing =
+                      editingState?.type === "note" &&
+                      editingState.index === index;
+
                     return (
                       <li
                         key={`note-${index}`}
                         className="border border-gray-100 rounded-lg p-4"
                       >
-                        <div className="flex flex-col gap-2">
-                          {isEditing ? (
-                            <div className="mt-3 space-y-3">
-                              <textarea
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                rows={3}
-                                value={noteDraft}
-                                onChange={(e) => setNoteDraft(e.target.value)}
-                                placeholder="전달하고 싶은 내용을 입력하세요."
-                              />
-                              <div className="flex justify-end">
-                                <button
-                                  onClick={saveNoteEdit}
-                                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-semibold"
-                                >
-                                  저장
-                                </button>
-                              </div>
+                        {isEditing && editingState.type === "note" ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={editingState.text}
+                              onChange={(e) =>
+                                setEditingState({
+                                  ...editingState,
+                                  text: e.target.value,
+                                })
+                              }
+                              rows={4}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={handleCancelEdit}
+                                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                              >
+                                취소
+                              </button>
+                              <button
+                                onClick={handleSaveNoteEdit}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                              >
+                                저장
+                              </button>
                             </div>
-                          ) : (
-                            <p className="mt-2 text-gray-700 leading-relaxed">
+                          </div>
+                        ) : (
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="text-gray-700 leading-relaxed flex-1">
                               {note}
                             </p>
-                          )}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                isEditing
-                                  ? cancelNoteEdit()
-                                  : startNoteEdit(index)
-                              }
-                              className="px-3 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
-                            >
-                              {isEditing ? "취소" : "수정"}
-                            </button>
-                            <button
-                              onClick={() => deleteNote(index)}
-                              className="text-sm px-3 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-                            >
-                              삭제
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditNote(index, note)}
+                                className="px-3 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                              >
+                                수정
+                              </button>
+                              <button
+                                onClick={() => handleDeleteNote(index)}
+                                className="px-3 py-1.5 text-sm text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                              >
+                                삭제
+                              </button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </li>
                     );
                   })}
