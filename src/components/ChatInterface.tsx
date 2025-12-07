@@ -54,7 +54,7 @@ export interface Message {
 
 // 대화 로그 인터페이스
 export interface ConversationLog {
-  patientInfo: PatientInfo;
+  patientInfo: Omit<PatientInfo, 'name'>; // 이름 제외
   medicalRecordId: string;
   sessionId: string;
   startTime: string;
@@ -144,8 +144,10 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
   // 대화 로그를 로컬 스토리지에 저장
   const saveConversationToLocalStorage = () => {
     try {
+      // 이름을 제외한 환자 정보
+      const { name, ...patientInfoWithoutName } = patientInfo;
       const conversationLog: ConversationLog = {
-        patientInfo,
+        patientInfo: patientInfoWithoutName,
         medicalRecordId,
         sessionId: sessionIdRef.current,
         startTime: sessionStartTimeRef.current,
@@ -207,8 +209,10 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
   // 대화 로그를 JSON 파일로 자동 다운로드
   const downloadConversationLog = () => {
     try {
+      // 이름을 제외한 환자 정보
+      const { name, ...patientInfoWithoutName } = patientInfo;
       const conversationLog: ConversationLog = {
-        patientInfo,
+        patientInfo: patientInfoWithoutName,
         medicalRecordId,
         sessionId: sessionIdRef.current,
         startTime: sessionStartTimeRef.current,
@@ -620,6 +624,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         // 모든 서브섹션이 완료됨
         if (updated.size >= 3) { // diagnosis_a, b, c가 모두 완료
           setMaxReachedIndex(prevIndex => Math.max(prevIndex, 1)); // 그외/새로운 통증 섹션 인덱스
+          
+          // 다음 카테고리로 자동 전환 (2.5초 후)
+          const currentCategoryIndex = categoryOrder.indexOf('main_diagnosis');
+          if (currentCategoryIndex < categoryOrder.length - 1) {
+            const nextCategory = categoryOrder[currentCategoryIndex + 1];
+            setTimeout(() => {
+              setCurrentCategory(nextCategory);
+            }, 2500);
+          }
         }
       }
       
@@ -700,6 +713,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
             } else {
               // 모든 서브섹션 완료
               setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2)); // 부작용 섹션 인덱스
+              
+              // 다음 카테고리로 자동 전환 (2초 후)
+              const currentCategoryIndex = categoryOrder.indexOf('new_pain');
+              if (currentCategoryIndex < categoryOrder.length - 1) {
+                const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                setTimeout(() => {
+                  setCurrentCategory(nextCategory);
+                }, 2000);
+              }
             }
           }, 2000);
         } else {
@@ -792,6 +814,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         updated.add(subSection);
         if (updated.size === newPainSubSections.length) {
           setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2)); // 부작용 섹션 인덱스
+          
+          // 다음 카테고리로 자동 전환 (2초 후)
+          const currentCategoryIndex = categoryOrder.indexOf('new_pain');
+          if (currentCategoryIndex < categoryOrder.length - 1) {
+            const nextCategory = categoryOrder[currentCategoryIndex + 1];
+            setTimeout(() => {
+              setCurrentCategory(nextCategory);
+            }, 2000);
+          }
         }
         return updated;
       });
@@ -848,6 +879,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
               updated.add(subSection);
               if (updated.size === sideEffectSubSections.length) {
                 setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3)); // 기타 섹션 인덱스
+                
+                // 다음 카테고리로 자동 전환 (2초 후)
+                const currentCategoryIndex = categoryOrder.indexOf('side_effects');
+                if (currentCategoryIndex < categoryOrder.length - 1) {
+                  const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                  setTimeout(() => {
+                    setCurrentCategory(nextCategory);
+                  }, 2000);
+                }
               }
               return updated;
             });
@@ -1377,6 +1417,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
                 updated.add('examination');
                 if (updated.size === mainDiagnosisSubSections.length) {
                   setMaxReachedIndex(prevIndex => Math.max(prevIndex, 1)); // 그외/새로운 통증 섹션 인덱스
+                  
+                  // 다음 카테고리로 자동 전환 (2.5초 후)
+                  const currentCategoryIndex = categoryOrder.indexOf('main_diagnosis');
+                  if (currentCategoryIndex < categoryOrder.length - 1) {
+                    const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                    setTimeout(() => {
+                      setCurrentCategory(nextCategory);
+                    }, 2500);
+                  }
                 }
                 return updated;
               });
@@ -1501,6 +1550,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
               } else {
                 // 모든 서브섹션 완료
                 setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2)); // 부작용 섹션 인덱스
+                
+                // 다음 카테고리로 자동 전환 (2.5초 후)
+                const currentCategoryIndex = categoryOrder.indexOf('new_pain');
+                if (currentCategoryIndex < categoryOrder.length - 1) {
+                  const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                  setTimeout(() => {
+                    setCurrentCategory(nextCategory);
+                  }, 2500);
+                }
               }
             }
           } catch (error) {
@@ -1617,6 +1675,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
               updated.add('new_pain');
               if (updated.size === newPainSubSections.length) {
                 setMaxReachedIndex(prevIndex => Math.max(prevIndex, 2)); // 부작용 섹션 인덱스
+                
+                // 다음 카테고리로 자동 전환 (2초 후)
+                const currentCategoryIndex = categoryOrder.indexOf('new_pain');
+                if (currentCategoryIndex < categoryOrder.length - 1) {
+                  const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                  setTimeout(() => {
+                    setCurrentCategory(nextCategory);
+                  }, 2000);
+                }
               }
               return updated;
             });
@@ -1700,6 +1767,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
               updated.add('medication');
               if (updated.size === sideEffectSubSections.length) {
                 setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3)); // 기타 섹션 인덱스
+                
+                // 다음 카테고리로 자동 전환 (2초 후)
+                const currentCategoryIndex = categoryOrder.indexOf('side_effects');
+                if (currentCategoryIndex < categoryOrder.length - 1) {
+                  const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                  setTimeout(() => {
+                    setCurrentCategory(nextCategory);
+                  }, 2000);
+                }
               }
               return updated;
             });

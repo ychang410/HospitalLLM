@@ -6,7 +6,6 @@ export interface PatientData {
   birthYear: string;
   birthMonth: string;
   birthDay: string;
-  phone: string;
 }
 
 export interface PatientResponse {
@@ -16,7 +15,6 @@ export interface PatientResponse {
   birthYear: string;
   birthMonth: string;
   birthDay: string;
-  phone: string;
   createdAt: string;
 }
 
