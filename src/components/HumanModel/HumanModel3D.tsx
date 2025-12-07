@@ -136,13 +136,17 @@ export const armPosition: ArmPosition = {
   },
 };
 
+export type SymptomStatus = "worse" | "same" | "better" | "new";
+
 interface HumanModel3DProps {
   highlightedParts?: BodyPart[];
+  partStatusMap?: Map<BodyPart, SymptomStatus>; // 각 bodyPart의 상태를 매핑
   showAllParts?: boolean; // 모든 부위를 표시할지 여부 (테스트용)
 }
 
-export default function HumanModel3D({ highlightedParts = [], showAllParts = false }: HumanModel3DProps) {
+export default function HumanModel3D({ highlightedParts = [], partStatusMap, showAllParts = false }: HumanModel3DProps) {
   console.log('HumanModel3D highlightedParts:', highlightedParts);
+  console.log('HumanModel3D partStatusMap:', partStatusMap);
   console.log('HumanModel3D showAllParts:', showAllParts);
   
   // showAllParts가 true이면 큰 네모들(leg, arm, back, hip)만 표시
@@ -151,6 +155,26 @@ export default function HumanModel3D({ highlightedParts = [], showAllParts = fal
     : highlightedParts;
   
   console.log('HumanModel3D partsToShow:', partsToShow);
+
+  // 상태에 따른 색상 매핑
+  const getColorForStatus = (status: SymptomStatus | undefined): { bg: string; ring: string } => {
+    switch (status) {
+      case "worse":
+        return { bg: "rgba(239, 68, 68, 0.5)", ring: "rgba(239, 68, 68, 0.3)" }; // 빨간색
+      case "same":
+        return { bg: "rgba(234, 179, 8, 0.5)", ring: "rgba(234, 179, 8, 0.3)" }; // 노란색
+      case "better":
+        return { bg: "rgba(34, 197, 94, 0.5)", ring: "rgba(34, 197, 94, 0.3)" }; // 초록색
+      case "new":
+        return { bg: "rgba(59, 130, 246, 0.5)", ring: "rgba(59, 130, 246, 0.3)" }; // 파란색
+      default:
+        return { bg: "rgba(59, 130, 246, 0.5)", ring: "rgba(59, 130, 246, 0.3)" }; // 기본 파란색
+    }
+  };
+
+  const getPartStatus = (part: BodyPart): SymptomStatus | undefined => {
+    return partStatusMap?.get(part);
+  };
   
   return (
     <div className="relative w-full h-full">
@@ -210,195 +234,213 @@ export default function HumanModel3D({ highlightedParts = [], showAllParts = fal
       />
       
       {/* leg인 경우 다리 전체를 하나의 둥근 네모로 표시 */}
-      {partsToShow.includes('leg') && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: `${legPosition.x * 101}%`,
-            top: `${legPosition.y * 80}%`,
-            width: `${legPosition.width * 200}%`,
-            height: `${legPosition.height * 130}%`,
-            transform: 'translate(-50%, 0)',
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderRadius: '60px',
-            zIndex: 9,
-          }}
-        >
-          {/* 퍼져나가는 애니메이션 */}
-          {[0, 1, 2].map((ringIndex) => (
-            <div
-              key={`leg-ring-${ringIndex}`}
-              className="absolute"
-              style={{
-                left: '50%',
-                top: '50%',
-                width: '100%',
-                height: '100%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                borderRadius: '60px',
-                animation: `rippleRectCenter 2s ease-out infinite`,
-                animationDelay: `${ringIndex * 0.6}s`,
-                opacity: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {partsToShow.includes('leg') && (() => {
+        const status = getPartStatus('leg');
+        const colors = getColorForStatus(status);
+        return (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${legPosition.x * 101}%`,
+              top: `${legPosition.y * 80}%`,
+              width: `${legPosition.width * 200}%`,
+              height: `${legPosition.height * 130}%`,
+              transform: 'translate(-50%, 0)',
+              backgroundColor: colors.bg,
+              borderRadius: '60px',
+              zIndex: 9,
+            }}
+          >
+            {/* 퍼져나가는 애니메이션 */}
+            {[0, 1, 2].map((ringIndex) => (
+              <div
+                key={`leg-ring-${ringIndex}`}
+                className="absolute"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '100%',
+                  height: '100%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: colors.ring,
+                  borderRadius: '60px',
+                  animation: `rippleRectCenter 2s ease-out infinite`,
+                  animationDelay: `${ringIndex * 0.6}s`,
+                  opacity: 0,
+                }}
+              />
+            ))}
+          </div>
+        );
+      })()}
       
       {/* arm인 경우 팔 전체를 둥근 네모로 표시 (수직선) */}
-      {partsToShow.includes('arm') && (
-        <>
-          {/* 왼쪽 팔 수직선 (오른쪽으로 20도 회전) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: `${armPosition.left.startX * 101.5}%`,
-              top: `${armPosition.left.startY * 98}%`,
-              width: `${armPosition.left.width - 50}px`,
-              height: '25%',
-              transform: 'translate(-50%, 0) rotate(20deg)',
-              transformOrigin: '50% 0',
-              backgroundColor: 'rgba(59, 130, 246, 0.5)',
-              borderRadius: '50px',
-              zIndex: 9,
-            }}
-          >
-            {/* 퍼져나가는 애니메이션 */}
-            {[0, 1, 2].map((ringIndex) => (
-              <div
-                key={`arm-left-ring-${ringIndex}`}
-                className="absolute"
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  width: '100%',
-                  height: '100%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                  borderRadius: '50px',
-                  animation: `rippleRectCenter 2s ease-out infinite`,
-                  animationDelay: `${ringIndex * 0.6}s`,
-                  opacity: 0,
-                }}
-              />
-            ))}
-          </div>
-          {/* 오른쪽 팔 수직선 (왼쪽으로 20도 회전) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: `${armPosition.right.startX * 100.5}%`,
-              top: `${armPosition.right.startY * 98}%`,
-              width: `${armPosition.right.width - 50}px`,
-              height: '25%',
-              transform: 'translate(-50%, 0) rotate(-20deg)',
-              transformOrigin: '50% 0',
-              backgroundColor: 'rgba(59, 130, 246, 0.5)',
-              borderRadius: '50px',
-              zIndex: 9,
-            }}
-          >
-            {/* 퍼져나가는 애니메이션 */}
-            {[0, 1, 2].map((ringIndex) => (
-              <div
-                key={`arm-right-ring-${ringIndex}`}
-                className="absolute"
-                style={{
-                  left: '50%',
-                  top: '50%',
-                  width: '100%',
-                  height: '100%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                  borderRadius: '50px',
-                  animation: `rippleRectCenter 2s ease-out infinite`,
-                  animationDelay: `${ringIndex * 0.6}s`,
-                  opacity: 0,
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
+      {partsToShow.includes('arm') && (() => {
+        const status = getPartStatus('arm');
+        const colors = getColorForStatus(status);
+        return (
+          <>
+            {/* 왼쪽 팔 수직선 (오른쪽으로 20도 회전) */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${armPosition.left.startX * 101.5}%`,
+                top: `${armPosition.left.startY * 98}%`,
+                width: `${armPosition.left.width - 50}px`,
+                height: '25%',
+                transform: 'translate(-50%, 0) rotate(20deg)',
+                transformOrigin: '50% 0',
+                backgroundColor: colors.bg,
+                borderRadius: '50px',
+                zIndex: 9,
+              }}
+            >
+              {/* 퍼져나가는 애니메이션 */}
+              {[0, 1, 2].map((ringIndex) => (
+                <div
+                  key={`arm-left-ring-${ringIndex}`}
+                  className="absolute"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    width: '100%',
+                    height: '100%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: colors.ring,
+                    borderRadius: '50px',
+                    animation: `rippleRectCenter 2s ease-out infinite`,
+                    animationDelay: `${ringIndex * 0.6}s`,
+                    opacity: 0,
+                  }}
+                />
+              ))}
+            </div>
+            {/* 오른쪽 팔 수직선 (왼쪽으로 20도 회전) */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${armPosition.right.startX * 100.5}%`,
+                top: `${armPosition.right.startY * 98}%`,
+                width: `${armPosition.right.width - 50}px`,
+                height: '25%',
+                transform: 'translate(-50%, 0) rotate(-20deg)',
+                transformOrigin: '50% 0',
+                backgroundColor: colors.bg,
+                borderRadius: '50px',
+                zIndex: 9,
+              }}
+            >
+              {/* 퍼져나가는 애니메이션 */}
+              {[0, 1, 2].map((ringIndex) => (
+                <div
+                  key={`arm-right-ring-${ringIndex}`}
+                  className="absolute"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    width: '100%',
+                    height: '100%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: colors.ring,
+                    borderRadius: '50px',
+                    animation: `rippleRectCenter 2s ease-out infinite`,
+                    animationDelay: `${ringIndex * 0.6}s`,
+                    opacity: 0,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        );
+      })()}
       
       {/* hip인 경우 엉덩이를 가로 둥근 네모로 표시 */}
-      {partsToShow.includes('hip') && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: `${hipPosition.x * 100.5}%`,
-            top: `${hipPosition.y * 77}%`,
-            width: `${hipPosition.width * 220}%`,
-            height: `${hipPosition.height * 120}%`,
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderRadius: '30px',
-            zIndex: 9,
-          }}
-        >
-          {/* 퍼져나가는 애니메이션 */}
-          {[0, 1, 2].map((ringIndex) => (
-            <div
-              key={`hip-ring-${ringIndex}`}
-              className="absolute"
-              style={{
-                left: '50%',
-                top: '50%',
-                width: '100%',
-                height: '100%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                borderRadius: '30px',
-                animation: `rippleRectCenter 2s ease-out infinite`,
-                animationDelay: `${ringIndex * 0.6}s`,
-                opacity: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {partsToShow.includes('hip') && (() => {
+        const status = getPartStatus('hip');
+        const colors = getColorForStatus(status);
+        return (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${hipPosition.x * 100.5}%`,
+              top: `${hipPosition.y * 77}%`,
+              width: `${hipPosition.width * 220}%`,
+              height: `${hipPosition.height * 120}%`,
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: colors.bg,
+              borderRadius: '30px',
+              zIndex: 9,
+            }}
+          >
+            {/* 퍼져나가는 애니메이션 */}
+            {[0, 1, 2].map((ringIndex) => (
+              <div
+                key={`hip-ring-${ringIndex}`}
+                className="absolute"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '100%',
+                  height: '100%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: colors.ring,
+                  borderRadius: '30px',
+                  animation: `rippleRectCenter 2s ease-out infinite`,
+                  animationDelay: `${ringIndex * 0.6}s`,
+                  opacity: 0,
+                }}
+              />
+            ))}
+          </div>
+        );
+      })()}
       
       {/* back인 경우 등을 둥근 네모로 표시 */}
-      {partsToShow.includes('back') && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: `${backPosition.x * 100.5}%`,
-            top: `${backPosition.y * 100}%`,
-            width: `${backPosition.width * 150}%`,
-            height: `${backPosition.height * 120}%`,
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderRadius: '20px',
-            zIndex: 9,
-          }}
-        >
-          {/* 퍼져나가는 애니메이션 */}
-          {[0, 1, 2].map((ringIndex) => (
-            <div
-              key={`back-ring-${ringIndex}`}
-              className="absolute"
-              style={{
-                left: '50%',
-                top: '50%',
-                width: '100%',
-                height: '100%',
-                transform: 'translate(-50%, -50%)',
-                backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                borderRadius: '20px',
-                animation: `rippleRectCenter 2s ease-out infinite`,
-                animationDelay: `${ringIndex * 0.6}s`,
-                opacity: 0,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {partsToShow.includes('back') && (() => {
+        const status = getPartStatus('back');
+        const colors = getColorForStatus(status);
+        return (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${backPosition.x * 100.5}%`,
+              top: `${backPosition.y * 100}%`,
+              width: `${backPosition.width * 150}%`,
+              height: `${backPosition.height * 120}%`,
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: colors.bg,
+              borderRadius: '20px',
+              zIndex: 9,
+            }}
+          >
+            {/* 퍼져나가는 애니메이션 */}
+            {[0, 1, 2].map((ringIndex) => (
+              <div
+                key={`back-ring-${ringIndex}`}
+                className="absolute"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  width: '100%',
+                  height: '100%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: colors.ring,
+                  borderRadius: '20px',
+                  animation: `rippleRectCenter 2s ease-out infinite`,
+                  animationDelay: `${ringIndex * 0.6}s`,
+                  opacity: 0,
+                }}
+              />
+            ))}
+          </div>
+        );
+      })()}
       
       {/* 하이라이트 오버레이 */}
       {partsToShow.filter(part => part !== 'leg' && part !== 'arm' && part !== 'back' && part !== 'hip').map((part, partIndex) => {
         const positions = bodyPartPositions[part];
+        const status = getPartStatus(part);
+        const colors = getColorForStatus(status);
         console.log(`Part: ${part}, Positions:`, positions);
         if (!positions || positions.length === 0) {
           console.warn(`No positions found for body part: ${part}`);
@@ -424,7 +466,7 @@ export default function HumanModel3D({ highlightedParts = [], showAllParts = fal
                 left: '50%',
                 top: '50%',
                 transform: 'translate(-50%, -50%)',
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                backgroundColor: colors.bg,
                 zIndex: 10,
               }}
             />
@@ -439,7 +481,7 @@ export default function HumanModel3D({ highlightedParts = [], showAllParts = fal
                   left: '50%',
                   top: '50%',
                   transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                  backgroundColor: colors.ring,
                   animation: `ripple 2s ease-out infinite`,
                   animationDelay: `${ringIndex * 0.6}s`,
                   opacity: 0,

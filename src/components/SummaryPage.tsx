@@ -7,7 +7,10 @@ import {
   SymptomStatusItem,
   SymptomTrend,
 } from "../services/gpt-summary";
-import HumanModel3D, { BodyPart } from "./HumanModel/HumanModel3D";
+import HumanModel3D, {
+  BodyPart,
+  SymptomStatus,
+} from "./HumanModel/HumanModel3D";
 
 const bodyPartLabels: Record<BodyPart, string> = {
   head: "머리",
@@ -78,6 +81,42 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
       .map((item) => item.bodyPart)
       .filter((part): part is BodyPart => Boolean(part));
     return Array.from(new Set(parts));
+  }, [summary]);
+
+  // 각 bodyPart의 상태를 매핑 (우선순위: worse > same > better > new)
+  const partStatusMap = useMemo(() => {
+    if (!summary) return new Map<BodyPart, SymptomStatus>();
+    const map = new Map<BodyPart, SymptomStatus>();
+
+    // worse 상태 추가
+    summary.symptomStatus.worse.forEach((item) => {
+      if (item.bodyPart) {
+        map.set(item.bodyPart, "worse");
+      }
+    });
+
+    // same 상태 추가 (worse가 아닌 경우만)
+    summary.symptomStatus.same.forEach((item) => {
+      if (item.bodyPart && !map.has(item.bodyPart)) {
+        map.set(item.bodyPart, "same");
+      }
+    });
+
+    // better 상태 추가 (worse, same이 아닌 경우만)
+    summary.symptomStatus.better.forEach((item) => {
+      if (item.bodyPart && !map.has(item.bodyPart)) {
+        map.set(item.bodyPart, "better");
+      }
+    });
+
+    // new 상태 추가 (다른 상태가 없는 경우만)
+    summary.newSymptoms.forEach((item) => {
+      if (item.bodyPart && !map.has(item.bodyPart)) {
+        map.set(item.bodyPart, "new");
+      }
+    });
+
+    return map;
   }, [summary]);
 
   const handleComplete = () => {
@@ -371,16 +410,34 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
   return (
     <div className="w-full min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto flex gap-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-800">
-              신체 부위 표시
-            </h2>
+        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-10 w-[400px] overflow-hidden self-start sticky top-6">
+          <h2 className="text-2xl font-semibold text-gray-800">
+            신체 부위 표시
+          </h2>
+          <div className="w-[240px] aspect-[240/420]">
+            <HumanModel3D
+              highlightedParts={highlightedParts}
+              partStatusMap={partStatusMap}
+            />
           </div>
-
-          <div className="flex-1 min-h-[420px]">
-            <div className="w-[240px] h-[420px]">
-              <HumanModel3D highlightedParts={highlightedParts} />
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-500"></div>
+              <span className="text-sm text-gray-700">악화증상</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+              <span className="text-sm text-gray-700">증상 변화 없음</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-green-500"></div>
+              <span className="text-sm text-gray-700">나아졌음</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+              <span className="text-sm text-gray-700">
+                새로운 증상이 생겼음
+              </span>
             </div>
           </div>
         </div>
@@ -444,9 +501,6 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
                 <h3 className="text-xl font-semibold text-gray-900">
                   진료 중 전달사항
                 </h3>
-                <p className="text-gray-500 text-sm">
-                  환자가 진료실에서 꼭 전달하거나 상기해야 할 메모입니다.
-                </p>
               </div>
               {summary.notesForDoctor.length > 0 ? (
                 <ul className="space-y-4 text-gray-800">

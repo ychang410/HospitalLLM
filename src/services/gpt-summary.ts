@@ -24,51 +24,41 @@ export interface StructuredSummary {
 export async function generateSummary(
   conversationLog: ConversationLog
 ): Promise<StructuredSummary> {
+  const symptomSectionKeys = [
+    "main_diagnosis_diagnosis_a",
+    "main_diagnosis_diagnosis_b",
+    "main_diagnosis_diagnosis_c",
+    "new_pain_other_pain",
+    "new_pain_new_pain",
+  ];
+  const additionalSectionKeys = [
+    "additional_questions_additional_question",
+    "main_diagnosis_examination",
+    "side_effects_medication",
+  ];
   // 대화 내용을 텍스트로 변환
-  const conversationText = formatConversationForSummary(conversationLog);
+  const symptomConversationText = formatConversationForSummary(
+    conversationLog,
+    symptomSectionKeys
+  );
 
-  const summaryFormat = `{
-  "symptomStatus": {
-    "worse": [
-      {
-        "symptom": "증상 이름",
-        "details": "증상에 대한 상세 설명",
-        "bodyPart": "head"
-      }
-    ],
-    "same": [
-      {
-        "symptom": "증상 이름",
-        "details": "증상에 대한 상세 설명",
-        "bodyPart": "neck"
-      }
-    ],
-    "better": [
-      {
-        "symptom": "증상 이름",
-        "details": "증상에 대한 상세 설명",
-        "bodyPart": "hand"
-      }
-    ]
-  },
-  "newSymptoms": [
-    {
-      "symptom": "새로운 증상 이름",
-      "details": "언제 어떻게 시작되었는지 등 세부 설명",
-      "bodyPart": "chest"
-    }
-  ],
-  "notesForDoctor": [
-    "진료실에서 의사에게 꼭 전달해야 할 내용"
-  ]
-}`;
+  const additionalConversationText = formatConversationForSummary(
+    conversationLog,
+    additionalSectionKeys
+  );
 
-  const systemPrompt = `당신은 의료진을 위한 전문적인 문진 요약 작성자입니다. 환자와의 대화를 기반으로 의사가 진료 전에 빠르게 파악할 수 있는 구조화된 정보를 제공합니다.`;
+  // const medicalRecordText = formatMedicalRecord(conversationLog);
+
+  const systemPrompt = `당신은 전문적인 문진 요약 작성자입니다. 환자와의 대화를 기반으로 구조화된 요약을 제공합니다.`;
 
   const knownSymptoms =
-    conversationLog.medicalRecordAnalysis?.symptoms?.map((symptom) =>
-      typeof symptom?.name === "string" ? symptom.name : ""
-    ) ?? [];
+    conversationLog.medicalRecordAnalysis?.symptoms
+      ?.map((symptom) => (symptom.present ? symptom.name : ""))
+      .concat(
+        conversationLog.medicalRecordAnalysis?.otherSymptoms?.map((symptom) =>
+          symptom.mentioned ? symptom.name : ""
+        ) ?? []
+      ) ?? [];
 
   const sanitizedKnownSymptoms = knownSymptoms
     .map((name) => name.trim())
@@ -78,45 +68,122 @@ export async function generateSummary(
     ? sanitizedKnownSymptoms.join(", ")
     : "기록된 기존 증상이 없습니다.";
 
-  const userPrompt = `다음은 환자와의 문진 대화 내용입니다. 이를 분석하여 아래 요구 사항을 만족하는 JSON만 반환하세요.
+  // const patitentQuestions =
+  //   conversationLog.conversations.additional_questions_additional_question?.messages.map(
+  //     (message) =>
+  //       `${message.role === "user" ? "환자" : "챗봇"}: ${message.content}\n`
+  //   ) ?? [];
 
-- 무조건 JSON 형식만 출력합니다. 마크다운, 설명, 텍스트는 허용되지 않습니다.
-- "symptomStatus" 필드에는 반드시 worse/same/better 세 가지 키가 존재해야 합니다.
-- 기존 증상이 악화되었다면 worse에 추가하고, 변화가 없다면 same에 추가하고, 개선되었다면 better에 추가하세요. 
-- 각 증상 객체에는 "symptom", "details", "bodyPart"를 모두 포함합니다. bodyPart는 다음 값 중 하나를 사용해주세요: ["head","neck","shoulder","arm","elbow","wrist","hand","chest","abdomen","back","lower_back","hip","leg","thigh","knee","ankle","foot"]. 부위를 특정할 수 없다면 null을 사용하세요.
-- 대화에서 언급되지 않은 증상 그룹은 빈 배열로 둡니다.
-- "newSymptoms" 배열에는 이전 진료 기록에 없었지만 이번 대화에서 새롭게 언급된 증상만 포함하세요. 기존 증상 목록: ${knownSymptomsText}. 새로운 증상이 없다면 빈 배열을 반환하세요.
-- "notesForDoctor"에는 환자가 반드시 전달해야 할 내용 혹은 의사에게 질문하고 싶은 내용을 짧은 문장으로 3개 작성하세요. 대화에서 언급이 없다면 환자의 입장에서 합리적으로 추론하여 환자의 시점에서 작성하세요.
+  // 첫 번째 API 호출: 증상 상태와 새 증상만 분석 (Symptom Conversation만 사용)
+  const symptomPrompt = `환자와 챗봇의 문진 내용을 아래와 같이 분석하여 JSON을 반환하세요.
+  - 무조건 JSON 형식만 출력합니다. 마크다운, 설명, 텍스트는 허용되지 않습니다.
+  - 반드시 [Symptom Conversation]만을 사용하세요. 다른 대화 내용은 절대 참고하지 마세요.
 
-- "same" 필드의 항목을 다시 확인하세요. 기존에 증상이 없었고 지금도 증상이 없다면 그곳에서 삭제합니다.
+  [Known Symptoms] 
+    ${knownSymptomsText}
+  [Symptom Conversation]
+    ${symptomConversationText}
 
-JSON 예시:
-${summaryFormat}
+  1. [Symptom Conversation]만을 이용해서 [Known Symptoms]에 대해 증상이 악화되었는지, 변화가 없는지, 개선되었는지 판단합니다.
+    - "symptomStatus" 필드에는 반드시 worse/same/better 세 가지 키가 존재해야 합니다.
+    - [Known Symptoms]가 악화되었다면 worse에 추가하고, 변화가 없다면 same에 추가하고, 개선되었다면 better에 추가하세요. 
+    - 각 증상 객체에는 "symptom", "details", "bodyPart"를 모두 포함합니다. bodyPart는 다음 값 중에 증상과 가장 관련 있는 하나를 사용해주세요: ["head","neck","shoulder","arm","elbow","wrist","hand","chest","abdomen","back","lower_back","hip","leg","thigh","knee","ankle","foot"].
+    - 대화에서 언급되지 않은 증상 그룹은 빈 배열로 둡니다.
+  2. [Symptom Conversation]만을 이용해서 새로운 증상이 있는지 판단합니다.
+    - "newSymptoms" 배열에는 이전 진료 기록에 없었지만 이번 대화에서 환자가 호소하는 증상만 포함하세요. 새로운 증상이 없다면 빈 배열을 반환하세요.
+  
+  JSON 예시:
+  {
+    "symptomStatus": {
+      "worse": [
+        {
+          "symptom": "증상 이름",
+          "details": "증상에 대한 상세 설명",
+          "bodyPart": "head"
+        }
+      ],
+      "same": [],
+      "better": []
+    },
+    "newSymptoms": [
+      {
+        "symptom": "새로운 증상 이름",
+        "details": "언제 어떻게 시작되었는지 등 세부 설명",
+        "bodyPart": "chest"
+      }
+    ]
+  }
+`;
 
-대화 내용:
-${conversationText}`;
+  // 두 번째 API 호출: 의사 전달 사항만 분석 (Additional Conversation 사용)
+  const notesPrompt = `환자와 챗봇의 문진 내용을 아래와 같이 분석하여 JSON을 반환하세요.
+  - 무조건 JSON 형식만 출력합니다. 마크다운, 설명, 텍스트는 허용되지 않습니다.
+  - 반드시 [Additional Conversation]을 우선적으로 사용하세요.
 
-  const messages: GPTMessage[] = [
+  [Additional Conversation]
+    ${additionalConversationText}
+  [Symptom Conversation]
+    ${symptomConversationText}
+
+  [Additional Conversation]을 이용해서 환자가 의사에게 전달하거나 질문할 내용을 작성합니다.
+    - "notesForDoctor" 필드에 환자가 반드시 전달해야 할 내용 혹은 의사에게 질문하고 싶은 내용을 문장으로 최대 3개까지 작성하세요.
+    - [Additional Conversation]에서 3개를 찾기 어렵다면, [Symptom Conversation]을 참고하여 환자의 입장에서 합리적으로 추론하여 환자의 시점으로 작성하세요.
+  
+  JSON 예시:
+  {
+    "notesForDoctor": [
+      "진료실에서 의사에게 꼭 전달해야 할 내용"
+    ]
+  }
+`;
+
+  const symptomMessages: GPTMessage[] = [
     {
       role: "system",
       content: systemPrompt,
     },
     {
       role: "user",
-      content: userPrompt,
+      content: symptomPrompt,
+    },
+  ];
+
+  const notesMessages: GPTMessage[] = [
+    {
+      role: "system",
+      content: systemPrompt,
+    },
+    {
+      role: "user",
+      content: notesPrompt,
     },
   ];
 
   try {
-    const rawSummary = await callGPTAPI(messages, "gpt-5.1", 1);
-    return parseSummaryResponse(rawSummary);
+    // 두 API 호출을 병렬로 실행
+    const [symptomResponse, notesResponse] = await Promise.all([
+      callGPTAPI(symptomMessages, "gpt-5.1", 1),
+      callGPTAPI(notesMessages, "gpt-5.1", 1),
+    ]);
+    console.log("Symptom Response:", symptomResponse);
+    // 각 응답을 파싱하여 합치기
+    const symptomData = parseSymptomResponse(symptomResponse);
+    const notesData = parseNotesResponse(notesResponse);
+
+    return {
+      symptomStatus: symptomData.symptomStatus,
+      newSymptoms: symptomData.newSymptoms,
+      notesForDoctor: notesData.notesForDoctor,
+    };
   } catch (error: any) {
     console.error("요약 생성 오류:", error);
     throw new Error(`요약 생성 실패: ${error.message}`);
   }
 }
 
-function parseSummaryResponse(response: string): StructuredSummary {
+function parseSymptomResponse(
+  response: string
+): Pick<StructuredSummary, "symptomStatus" | "newSymptoms"> {
   let jsonString = response.trim();
 
   jsonString = jsonString.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
@@ -125,18 +192,18 @@ function parseSummaryResponse(response: string): StructuredSummary {
   const jsonEnd = jsonString.lastIndexOf("}");
 
   if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-    console.error("요약 응답:", response);
-    throw new Error("구조화된 요약 JSON을 파싱할 수 없습니다.");
+    console.error("증상 응답:", response);
+    throw new Error("구조화된 증상 JSON을 파싱할 수 없습니다.");
   }
 
   jsonString = jsonString.substring(jsonStart, jsonEnd + 1);
 
-  let parsed: StructuredSummary;
+  let parsed: any;
   try {
     parsed = JSON.parse(jsonString);
   } catch (error: any) {
-    console.error("요약 JSON 문자열:", jsonString);
-    throw new Error(`요약 JSON 파싱 실패: ${error.message}`);
+    console.error("증상 JSON 문자열:", jsonString);
+    throw new Error(`증상 JSON 파싱 실패: ${error.message}`);
   }
 
   // 기본 구조 보정
@@ -181,6 +248,41 @@ function parseSummaryResponse(response: string): StructuredSummary {
       }));
   };
 
+  return {
+    symptomStatus: {
+      worse: ensureArray(parsed?.symptomStatus?.worse),
+      same: ensureArray(parsed?.symptomStatus?.same),
+      better: ensureArray(parsed?.symptomStatus?.better),
+    },
+    newSymptoms: ensureArray(parsed?.newSymptoms),
+  };
+}
+
+function parseNotesResponse(
+  response: string
+): Pick<StructuredSummary, "notesForDoctor"> {
+  let jsonString = response.trim();
+
+  jsonString = jsonString.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
+
+  const jsonStart = jsonString.indexOf("{");
+  const jsonEnd = jsonString.lastIndexOf("}");
+
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+    console.error("의사 전달사항 응답:", response);
+    throw new Error("구조화된 의사 전달사항 JSON을 파싱할 수 없습니다.");
+  }
+
+  jsonString = jsonString.substring(jsonStart, jsonEnd + 1);
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch (error: any) {
+    console.error("의사 전달사항 JSON 문자열:", jsonString);
+    throw new Error(`의사 전달사항 JSON 파싱 실패: ${error.message}`);
+  }
+
   const ensureStringArray = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
     return value.filter(
@@ -189,32 +291,15 @@ function parseSummaryResponse(response: string): StructuredSummary {
     );
   };
 
-  const sanitized: StructuredSummary = {
-    symptomStatus: {
-      worse: ensureArray(parsed?.symptomStatus?.worse),
-      same: ensureArray(parsed?.symptomStatus?.same),
-      better: ensureArray(parsed?.symptomStatus?.better),
-    },
-    newSymptoms: ensureArray(parsed?.newSymptoms),
+  return {
     notesForDoctor: ensureStringArray(parsed?.notesForDoctor),
   };
-
-  return sanitized;
 }
 
-/**
- * 대화 로그를 요약 생성을 위한 텍스트 형식으로 변환합니다.
- * @param conversationLog 대화 로그
- * @returns 포맷된 대화 텍스트
- */
-function formatConversationForSummary(
-  conversationLog: ConversationLog
-): string {
+function formatMedicalRecord(conversationLog: ConversationLog): string {
   let text = `환자 정보:
-- 이름: ${conversationLog.patientInfo.name}
 - 성별: ${conversationLog.patientInfo.gender}
 - 생년월일: ${conversationLog.patientInfo.birthYear}-${conversationLog.patientInfo.birthMonth}-${conversationLog.patientInfo.birthDay}
-- 전화번호: ${conversationLog.patientInfo.phone}
 
 `;
 
@@ -227,6 +312,7 @@ function formatConversationForSummary(
     ) {
       text += `지난 진료에서 보고된 증상:\n`;
       conversationLog.medicalRecordAnalysis.symptoms.forEach((symptom, idx) => {
+        if (!symptom.mentioned) return;
         text += `${idx + 1}. ${symptom.name} (부위: ${
           symptom.bodyPart || "미상"
         }, 지난 방문 시 상태: ${
@@ -245,11 +331,26 @@ function formatConversationForSummary(
         .join(", ")}\n\n`;
     }
   }
-
-  text += `대화 내용:\n\n`;
-
+  return text;
+}
+/**
+ * 대화 로그를 요약 생성을 위한 텍스트 형식으로 변환합니다.
+ * @param conversationLog 대화 로그
+ * @param allowedSectionKeys 특정 section 키만 포함할 경우 지정 (예: ["main_diagnosis_diagnosis_a", "main_diagnosis_diagnosis_b"])
+ * @returns 포맷된 대화 텍스트
+ */
+function formatConversationForSummary(
+  conversationLog: ConversationLog,
+  allowedSectionKeys?: string[]
+): string {
+  let text = "";
   // 섹션별로 대화 내용 정리
-  Object.entries(conversationLog.conversations).forEach(([, data]) => {
+  Object.entries(conversationLog.conversations).forEach(([key, data]) => {
+    // allowedSectionKeys가 지정된 경우, 해당 키만 포함
+    if (allowedSectionKeys && !allowedSectionKeys.includes(key)) {
+      return;
+    }
+
     text += `[${data.section}`;
     if (data.subSection) {
       text += ` - ${data.subSection}`;
@@ -257,7 +358,7 @@ function formatConversationForSummary(
     text += `]\n`;
 
     data.messages.forEach((message) => {
-      const role = message.role === "user" ? "환자" : "의사";
+      const role = message.role === "user" ? "환자" : "챗봇";
       text += `${role}: ${message.content}\n`;
     });
 
