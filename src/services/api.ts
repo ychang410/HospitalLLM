@@ -3,18 +3,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001
 export interface PatientData {
   name: string;
   gender: string;
-  birthYear: string;
-  birthMonth: string;
-  birthDay: string;
+  age: string; // 만 나이
 }
 
 export interface PatientResponse {
   id: string;
   name: string;
   gender: string;
-  birthYear: string;
-  birthMonth: string;
-  birthDay: string;
+  age: string; // 만 나이
   createdAt: string;
 }
 

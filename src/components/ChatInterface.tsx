@@ -6,6 +6,7 @@ import ChatInput from './Chat/ChatInput';
 import HumanModel3D from './HumanModel/HumanModel3D';
 import scripts from '../data/scripts.json';
 import { MedicalRecordAnalysis } from '../services/gpt-common';
+import { USE_BIRTHDATE_VERSION } from '../config/patient-info';
 import { chatAboutSymptom, chatAboutExamination, SymptomChatResponse, getMainDiagnosisIntroMessages, getSymptomIntroMessage, getSymptomInitialQuestion, getExaminationMessages, getMainDiagnosisCompletionMessage } from '../services/gpt-chat-main-diagnosis';
 import { generateNewPainQuestion, chatAboutNewPain, NewPainChatResponse, getOtherNewPainIntroMessages, getOtherPainEmptyMessage, getOtherPainFirstQuestion, getNewPainHardcodedMessage, getNewPainCompletionMessage } from '../services/gpt-chat-new-pain';
 import { generateSideEffectQuestion, chatAboutSideEffects, SideEffectChatResponse, getSideEffectsIntroMessage, getMedicationHardcodedMessage, getMedicationEmptyMessage, getSideEffectCompletionMessage } from '../services/gpt-chat-side-effects';
@@ -131,6 +132,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
   const [loadedSubSections, setLoadedSubSections] = useState<Set<string>>(new Set());
   const mainDiagnosisIntroShownRef = useRef(false);
   const newPainIntroShownRef = useRef(false);
+  const newPainQuestionGeneratedRef = useRef(false); // 새로운 통증 서브섹션에서 GPT 질문 생성 여부 추적
   const [isGeneratingIntro, setIsGeneratingIntro] = useState(false);
   const [isProcessingGPT, setIsProcessingGPT] = useState(false);
   const [completedSymptomSubSections, setCompletedSymptomSubSections] = useState<Set<string>>(new Set()); // 완료된 증상 서브섹션 추적
@@ -138,10 +140,27 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
   const sessionStartTimeRef = useRef<string>(new Date().toISOString());
   const sessionIdRef = useRef<string>(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
-  // 로컬 스토리지 키 생성 (생년월일 기반)
+  // 로컬 스토리지 키 생성
   const getStorageKey = () => {
-    const birthDate = `${patientInfo.birthYear}-${patientInfo.birthMonth.padStart(2, '0')}-${patientInfo.birthDay.padStart(2, '0')}`;
-    return `conversation_log_${birthDate}_${medicalRecordId}`;
+    if (USE_BIRTHDATE_VERSION && patientInfo.birthYear && patientInfo.birthMonth && patientInfo.birthDay) {
+      const birthDate = `${patientInfo.birthYear}-${patientInfo.birthMonth.padStart(2, '0')}-${patientInfo.birthDay.padStart(2, '0')}`;
+      return `conversation_log_${birthDate}_${medicalRecordId}`;
+    }
+    return `conversation_log_age${patientInfo.age}_${medicalRecordId}`;
+  };
+
+  // 메시지 내용에서 환자 이름 제거하는 함수
+  const removePatientNameFromContent = (content: string): string => {
+    if (!patientInfo?.name) return content;
+    
+    const name = patientInfo.name;
+    const nameWithHonorific = `${name}님`;
+    
+    // 환자 이름을 "환자"로 대체
+    let cleanedContent = content.replace(new RegExp(nameWithHonorific, 'g'), '환자님');
+    cleanedContent = cleanedContent.replace(new RegExp(name, 'g'), '환자');
+    
+    return cleanedContent;
   };
 
   // 대화 로그를 로컬 스토리지에 저장
@@ -169,7 +188,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
           messages: messages.map(msg => ({
             id: msg.id,
             role: msg.role,
-            content: msg.content,
+            content: removePatientNameFromContent(msg.content), // 환자 이름 제거
             timestamp: msg.timestamp.toISOString(),
           })),
         };
@@ -234,7 +253,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         messages: messages.map(msg => ({
           id: msg.id,
           role: msg.role,
-          content: msg.content,
+          content: removePatientNameFromContent(msg.content), // 환자 이름 제거
           timestamp: msg.timestamp.toISOString(),
         })),
       };
@@ -253,9 +272,15 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const birthDate = `${patientInfo.birthYear}-${patientInfo.birthMonth.padStart(2, '0')}-${patientInfo.birthDay.padStart(2, '0')}`;
-      // patient_data 폴더에 저장되도록 파일명 지정
-      link.download = `patient_data/conversation_log_${birthDate}_${new Date().toISOString().split('T')[0]}.json`;
+      // conversationLogs 폴더에 저장되도록 파일명 지정
+      let filename: string;
+      if (USE_BIRTHDATE_VERSION && patientInfo.birthYear && patientInfo.birthMonth && patientInfo.birthDay) {
+        const birthDate = `${patientInfo.birthYear}-${patientInfo.birthMonth.padStart(2, '0')}-${patientInfo.birthDay.padStart(2, '0')}`;
+        filename = `conversationLogs/conversation_log_${birthDate}_${new Date().toISOString().split('T')[0]}.json`;
+      } else {
+        filename = `conversationLogs/conversation_log_age${patientInfo.age}_${new Date().toISOString().split('T')[0]}.json`;
+      }
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -741,6 +766,8 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
       setHighlightedBodyParts([]);
       
       if (!isActivated) {
+        // GPT 질문 생성 여부 ref 초기화
+        newPainQuestionGeneratedRef.current = false;
         setIsProcessingGPT(true);
         
         // 첫 번째 하드코딩된 메시지
@@ -782,6 +809,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
                 return newMap;
               });
               
+              newPainQuestionGeneratedRef.current = true; // GPT 질문 생성 완료 표시
               setIsProcessingGPT(false);
             }, 800);
           } catch (error) {
@@ -791,6 +819,9 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         } else {
           setIsProcessingGPT(false);
         }
+      } else {
+        // 이미 활성화된 서브섹션이면 GPT 질문이 생성되었을 것으로 간주
+        newPainQuestionGeneratedRef.current = true;
       }
     }
 
@@ -1613,12 +1644,27 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
           }
         }
         
-        // 대화 히스토리에서 질문 개수 계산 (assistant 메시지 수)
-        const questionCount = conversationHistory.filter(msg => msg.role === 'assistant').length;
+        // 첫 번째 질문은 이미 handleNewPainSubSectionChange에서 생성되었으므로,
+        // GPT 질문이 아직 생성되지 않았거나, 사용자가 첫 답변을 보낼 때는 chatAboutNewPain을 호출하지 않음
+        // 대화 히스토리에서 assistant 메시지 개수 확인
+        const assistantMessages = conversationHistory.filter(msg => msg.role === 'assistant');
+        const conversationUserMessages = conversationHistory.filter(msg => msg.role === 'user');
         
-        // 첫 번째 질문은 이미 handleNewPainSubSectionChange에서 생성되었으므로, 
-        // questionCount가 0이면 chatAboutNewPain을 호출하지 않음
-        if (questionCount === 0) {
+        // GPT 질문이 생성되지 않았거나, 사용자 메시지가 없으면 (첫 답변 전) chatAboutNewPain을 호출하지 않음
+        if (!newPainQuestionGeneratedRef.current || conversationUserMessages.length === 0) {
+          setIsProcessingGPT(false);
+          return;
+        }
+        
+        // GPT 질문이 생성되었고 사용자 답변이 있으면, 대화 히스토리에서 하드코딩 메시지와 GPT 초기 질문을 제외한 질문 개수 계산
+        const hardcodedMessage = getNewPainHardcodedMessage();
+        const actualQuestionCount = assistantMessages.filter(msg => 
+          msg.content !== hardcodedMessage && 
+          !msg.content.includes('앞에서 이야기한 증상들 외에')
+        ).length;
+        
+        // 실제 질문 개수가 0이면 (하드코딩 메시지와 GPT 초기 질문만 있는 경우) chatAboutNewPain을 호출하지 않음
+        if (actualQuestionCount === 0) {
           setIsProcessingGPT(false);
           return;
         }

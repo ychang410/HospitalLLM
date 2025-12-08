@@ -6,13 +6,15 @@ import AnalysisPage from "./components/AnalysisPage";
 import SummaryPage from "./components/SummaryPage";
 import { MedicalRecordAnalysis } from "./services/gpt-common";
 import { ConversationLog } from "./components/ChatInterface";
+import { USE_BIRTHDATE_VERSION } from "./config/patient-info";
 
 export interface PatientInfo {
   name: string;
   gender: string;
-  birthYear: string;
-  birthMonth: string;
-  birthDay: string;
+  age: string; // 만 나이 (USE_BIRTHDATE_VERSION이 false일 때 사용)
+  birthYear?: string; // 생년월일 (USE_BIRTHDATE_VERSION이 true일 때 사용)
+  birthMonth?: string;
+  birthDay?: string;
 }
 
 function App() {
@@ -60,9 +62,14 @@ function App() {
         medicalRecordAnalysis: medicalRecordAnalysis || undefined,
       };
 
-      // 로컬 스토리지에 초기 로그 저장 (생년월일 기반)
-      const birthDate = `${info.birthYear}-${info.birthMonth.padStart(2, '0')}-${info.birthDay.padStart(2, '0')}`;
-      const storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
+      // 로컬 스토리지에 초기 로그 저장
+      let storageKey: string;
+      if (USE_BIRTHDATE_VERSION && info.birthYear && info.birthMonth && info.birthDay) {
+        const birthDate = `${info.birthYear}-${info.birthMonth.padStart(2, '0')}-${info.birthDay.padStart(2, '0')}`;
+        storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
+      } else {
+        storageKey = `conversation_log_age${info.age}_${medicalRecordId}`;
+      }
       localStorage.setItem(storageKey, JSON.stringify(initialLog));
     }
 

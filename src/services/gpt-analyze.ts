@@ -27,33 +27,152 @@ export async function analyzeMedicalRecord(file: File): Promise<MedicalRecordAna
     throw new Error(`파일 읽기 실패: ${error.message}`);
   }
 
-  // GPT에 분석 요청
-  const prompt = `다음은 환자의 진료 기록입니다. 이 기록을 분석하여 다음 정보를 JSON 형식으로 제공해주세요:
-
-1. 주요 진단명 (mainDiagnosis): 진료 기록에서 가장 중요한 진단명을 하나 추출하세요.
-2. 주요 증상 (symptoms): 진료 기록에 적혀있는 증상을 무시하고, 해당 진단명의 대표적인 주요 증상 3개를 나열하세요 (common symptoms). 증상명은 반드시 전문적인 의학 용어를 사용하세요. (예: "다리에 힘빠짐" → "다리 근력 저하" 등)
-3. 각 증상의 언급 여부 (mentioned): 각 증상이 진료 기록에서 언급되었는지 true/false로 표시하세요.
-4. 각 증상의 유무 (present): mentioned가 true인 경우, 해당 증상이 있다고 했는지(present: true) 아니면 없다고 했는지(present: false)를 판단하세요. mentioned가 false인 경우 present는 false로 설정하세요.
-5. 기타 증상 (otherSymptoms): 진료 기록에서 언급되었지만 주요 진단명과 관련 없는 기타 증상들을 나열하세요. (없으면 빈 배열) 증상명은 반드시 전문적인 의학 용어를 사용하세요.
-6. 검사 (examinations): 진료 기록에서 언급된 검사들을 나열하세요. (없으면 빈 배열)
-7. 처방약 (medications): 진료 기록에서 언급된 처방약들을 나열하세요. (없으면 빈 배열)
+  // 1단계: 주요 진단명 추출
+  const diagnosisPrompt = `다음은 환자의 진료 기록입니다. 이 기록을 분석하여 가장 중요한 주요 진단명을 하나만 추출해주세요.
 
 응답은 반드시 다음 JSON 형식으로만 제공해주세요. 다른 설명이나 텍스트 없이 JSON만 제공하세요:
 {
-  "mainDiagnosis": "진단명",
+  "mainDiagnosis": "진단명"
+}
+
+진료 기록:
+${fileContent.substring(0, 10000)}`;
+
+  const diagnosisMessages: GPTMessage[] = [
+    {
+      role: 'system',
+      content: '당신은 의료 기록을 분석하는 전문가입니다. 진료 기록에서 가장 중요한 주요 진단명을 정확하게 추출해주세요. 응답은 반드시 유효한 JSON 형식으로만 제공하세요.',
+    },
+    {
+      role: 'user',
+      content: diagnosisPrompt,
+    },
+  ];
+
+  let diagnosisResponse: string;
+  try {
+    diagnosisResponse = await callGPTAPI(diagnosisMessages);
+  } catch (error: any) {
+    console.error('진단명 추출 GPT API 호출 오류:', error);
+    throw new Error(`진단명 추출 실패: ${error.message}`);
+  }
+
+  // 진단명 파싱
+  let diagnosisJsonString = diagnosisResponse.trim();
+  diagnosisJsonString = diagnosisJsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const diagnosisJsonStart = diagnosisJsonString.indexOf('{');
+  const diagnosisJsonEnd = diagnosisJsonString.lastIndexOf('}');
+  
+  if (diagnosisJsonStart === -1 || diagnosisJsonEnd === -1 || diagnosisJsonEnd <= diagnosisJsonStart) {
+    throw new Error('진단명 JSON 형식을 찾을 수 없습니다.');
+  }
+  
+  diagnosisJsonString = diagnosisJsonString.substring(diagnosisJsonStart, diagnosisJsonEnd + 1);
+  const diagnosisResult = JSON.parse(diagnosisJsonString);
+  const mainDiagnosis = diagnosisResult.mainDiagnosis;
+
+  if (!mainDiagnosis || typeof mainDiagnosis !== 'string') {
+    throw new Error('mainDiagnosis가 올바르지 않습니다.');
+  }
+
+  // 2단계: 진단명 기반으로 주요 증상 3개 추출 (의학 지식 기반, 노인 환자군 대상)
+  const symptomsPrompt = `다음 진단명에 대한 대표적인 신경의학적 주요 증상 3개를 나열해주세요. 노인 환자군에 맞는 주요 증상들을 의학 지식에 기반하여 추출해주세요.
+
+증상명은 반드시 전문적인 의학 용어를 사용하세요. (예: "다리에 힘빠짐" → "다리 근력 저하" 등)
+
+진단명: ${mainDiagnosis}
+
+응답은 반드시 다음 JSON 형식으로만 제공해주세요:
+{
   "symptoms": [
     {
-      "name": "증상1",
+      "name": "증상1"
+    },
+    {
+      "name": "증상2"
+    },
+    {
+      "name": "증상3"
+    }
+  ]
+}`;
+
+  const symptomsMessages: GPTMessage[] = [
+    {
+      role: 'system',
+      content: '당신은 의학 전문가입니다. 주어진 진단명에 대한 대표적인 신경의학적 주요 증상 3개를 의학 지식에 기반하여 추출해주세요. 노인 환자군에 맞는 주요 증상들을 우선적으로 추출해주세요. 응답은 반드시 유효한 JSON 형식으로만 제공하세요.',
+    },
+    {
+      role: 'user',
+      content: symptomsPrompt,
+    },
+  ];
+
+  let symptomsResponse: string;
+  try {
+    symptomsResponse = await callGPTAPI(symptomsMessages);
+  } catch (error: any) {
+    console.error('증상 추출 GPT API 호출 오류:', error);
+    throw new Error(`증상 추출 실패: ${error.message}`);
+  }
+
+  // 증상 파싱
+  let symptomsJsonString = symptomsResponse.trim();
+  symptomsJsonString = symptomsJsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const symptomsJsonStart = symptomsJsonString.indexOf('{');
+  const symptomsJsonEnd = symptomsJsonString.lastIndexOf('}');
+  
+  if (symptomsJsonStart === -1 || symptomsJsonEnd === -1 || symptomsJsonEnd <= symptomsJsonStart) {
+    throw new Error('증상 JSON 형식을 찾을 수 없습니다.');
+  }
+  
+  symptomsJsonString = symptomsJsonString.substring(symptomsJsonStart, symptomsJsonEnd + 1);
+  const symptomsResult = JSON.parse(symptomsJsonString);
+  const extractedSymptoms = symptomsResult.symptoms || [];
+
+  if (!Array.isArray(extractedSymptoms) || extractedSymptoms.length === 0) {
+    throw new Error('증상 배열이 올바르지 않습니다.');
+  }
+
+  // 특별한 예외 처리: "보행 장애" → "다리 근력 저하"
+  extractedSymptoms.forEach((symptom: any) => {
+    if (symptom.name === '보행 장애' || symptom.name === '보행장애') {
+      symptom.name = '다리 근력 저하';
+    }
+  });
+
+  // 3단계: txt 파일 재분석하여 mentioned, present, otherSymptoms, examinations, medications 추출
+  const analysisPrompt = `다음은 환자의 진료 기록입니다. 이 기록을 분석하여 다음 정보를 JSON 형식으로 제공해주세요:
+
+1. 주요 증상들의 언급 여부 및 유무:
+   - 아래에 나열된 주요 증상들이 진료 기록에서 언급되었는지 확인하세요.
+   - 각 증상의 mentioned: 진료 기록에서 언급되었으면 true, 언급되지 않았으면 false
+   - 각 증상의 present: mentioned가 true인 경우, 해당 증상이 있다고 했는지(present: true) 아니면 없다고 했는지(present: false)를 판단하세요. mentioned가 false인 경우 present는 false로 설정하세요.
+
+2. 기타 증상 (otherSymptoms): 진료 기록에서 언급되었지만 주요 진단명과 관련 없는 (주요 증상에 포함되어 있지 않은) 기타 증상들을 나열하세요. (없으면 빈 배열) 증상명은 반드시 전문적인 의학 용어를 사용하세요.
+
+3. 검사 (examinations): 진료 기록에서 언급된 검사들을 나열하세요. (없으면 빈 배열)
+
+4. 처방약 (medications): 진료 기록에서 언급된 처방약들을 나열하세요. (없으면 빈 배열)
+
+주요 증상 목록:
+${extractedSymptoms.map((s: any, i: number) => `${i + 1}. ${s.name}`).join('\n')}
+
+응답은 반드시 다음 JSON 형식으로만 제공해주세요:
+{
+  "symptoms": [
+    {
+      "name": "${extractedSymptoms[0].name}",
       "mentioned": true 또는 false,
       "present": true 또는 false
     },
     {
-      "name": "증상2",
+      "name": "${extractedSymptoms[1]?.name || ''}",
       "mentioned": true 또는 false,
       "present": true 또는 false
     },
     {
-      "name": "증상3",
+      "name": "${extractedSymptoms[2]?.name || ''}",
       "mentioned": true 또는 false,
       "present": true 또는 false
     }
@@ -62,85 +181,68 @@ export async function analyzeMedicalRecord(file: File): Promise<MedicalRecordAna
     {
       "name": "기타 증상1",
       "mentioned": true
-    },
-    {
-      "name": "기타 증상2",
-      "mentioned": true
     }
   ],
   "examinations": [
     {
       "name": "검사 이름1"
-    },
-    {
-      "name": "검사 이름2"
     }
   ],
   "medications": [
     {
       "name": "약 이름1"
-    },
-    {
-      "name": "약 이름2"
     }
   ]
 }
 
 진료 기록:
-${fileContent.substring(0, 10000)}`; // 파일 크기 제한
+${fileContent.substring(0, 10000)}`;
 
-  const messages: GPTMessage[] = [
+  const analysisMessages: GPTMessage[] = [
     {
       role: 'system',
-      content: '당신은 의료 기록을 분석하는 전문가입니다. 진료 기록에서 주요 진단명과 증상을 정확하게 추출해주세요. 응답은 반드시 유효한 JSON 형식으로만 제공하세요. 다른 설명이나 마크다운 코드 블록 없이 순수 JSON만 제공하세요.',
+      content: '당신은 의료 기록을 분석하는 전문가입니다. 진료 기록에서 증상의 언급 여부, 기타 증상, 검사, 처방약을 정확하게 추출해주세요. 응답은 반드시 유효한 JSON 형식으로만 제공하세요.',
     },
     {
       role: 'user',
-      content: prompt,
+      content: analysisPrompt,
     },
   ];
 
-  let response: string;
+  let analysisResponse: string;
   try {
-    response = await callGPTAPI(messages);
+    analysisResponse = await callGPTAPI(analysisMessages);
   } catch (error: any) {
-    console.error('GPT API 호출 오류:', error);
-    throw new Error(`GPT API 호출 실패: ${error.message}`);
+    console.error('분석 GPT API 호출 오류:', error);
+    throw new Error(`분석 실패: ${error.message}`);
   }
   
   try {
-    // JSON 응답 파싱 - 더 견고한 파싱 로직
-    let jsonString = response.trim();
-    
-    // 마크다운 코드 블록 제거
+    // JSON 응답 파싱
+    let jsonString = analysisResponse.trim();
     jsonString = jsonString.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // JSON 객체 시작과 끝 찾기
     const jsonStart = jsonString.indexOf('{');
     const jsonEnd = jsonString.lastIndexOf('}');
     
     if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
-      console.error('GPT 응답:', response);
+      console.error('GPT 응답:', analysisResponse);
       throw new Error('JSON 형식을 찾을 수 없습니다.');
     }
     
     jsonString = jsonString.substring(jsonStart, jsonEnd + 1);
     
-    // JSON 파싱 시도
-    let analysis: MedicalRecordAnalysis;
-    try {
-      analysis = JSON.parse(jsonString);
-    } catch (parseError: any) {
-      console.error('파싱 실패한 JSON 문자열:', jsonString);
-      console.error('원본 응답:', response);
-      throw new Error(`JSON 파싱 실패: ${parseError.message}`);
-    }
+    const analysisResult = JSON.parse(jsonString);
+    
+    // 최종 결과 조합
+    const analysis: MedicalRecordAnalysis = {
+      mainDiagnosis: mainDiagnosis,
+      symptoms: analysisResult.symptoms || [],
+      otherSymptoms: analysisResult.otherSymptoms || [],
+      examinations: analysisResult.examinations || [],
+      medications: analysisResult.medications || [],
+    };
     
     // 유효성 검사
-    if (!analysis.mainDiagnosis || typeof analysis.mainDiagnosis !== 'string') {
-      throw new Error('mainDiagnosis가 올바르지 않습니다.');
-    }
-    
     if (!Array.isArray(analysis.symptoms)) {
       throw new Error('symptoms가 배열이 아닙니다.');
     }
@@ -208,7 +310,7 @@ ${fileContent.substring(0, 10000)}`; // 파일 크기 제한
     return analysis;
   } catch (error: any) {
     console.error('진료 기록 분석 오류:', error);
-    console.error('GPT 원본 응답:', response);
+    console.error('GPT 원본 응답:', analysisResponse);
     if (error.message) {
       throw new Error(`분석 오류: ${error.message}`);
     }
