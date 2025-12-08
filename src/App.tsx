@@ -13,7 +13,6 @@ export interface PatientInfo {
   birthYear: string;
   birthMonth: string;
   birthDay: string;
-  phone: string;
 }
 
 function App() {
@@ -47,8 +46,10 @@ function App() {
 
     // 환자 정보 입력 시 대화 로그 JSON 파일 초기화
     if (medicalRecordId) {
+      // 이름을 제외한 환자 정보
+      const { name, ...patientInfoWithoutName } = info;
       const initialLog: ConversationLog = {
-        patientInfo: info,
+        patientInfo: patientInfoWithoutName,
         medicalRecordId: medicalRecordId,
         sessionId: `session-${Date.now()}-${Math.random()
           .toString(36)
