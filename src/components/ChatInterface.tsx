@@ -19,7 +19,7 @@ interface ChatInterfaceProps {
   patientId: string;
   medicalRecordId: string;
   medicalRecordAnalysis: MedicalRecordAnalysis | null;
-  onConversationComplete?: () => void; // 대화 완료 시 콜백
+  onConversationComplete?: (conversationLog: ConversationLog) => void; // 대화 완료 시 콜백 (conversation log 전달)
 }
 
 export type Category = 'main_diagnosis' | 'new_pain' | 'side_effects' | 'additional_questions';
@@ -206,38 +206,44 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
     }
   };
 
+  // 대화 로그를 생성하는 함수
+  const createConversationLog = (): ConversationLog => {
+    // 이름을 제외한 환자 정보
+    const { name, ...patientInfoWithoutName } = patientInfo;
+    const conversationLog: ConversationLog = {
+      patientInfo: patientInfoWithoutName,
+      medicalRecordId,
+      sessionId: sessionIdRef.current,
+      startTime: sessionStartTimeRef.current,
+      endTime: new Date().toISOString(),
+      conversations: {},
+      medicalRecordAnalysis: medicalRecordAnalysis || undefined,
+    };
+
+    // messagesBySection을 conversations 객체로 변환
+    messagesBySection.forEach((messages, sectionKey) => {
+      const [category, ...subSectionParts] = sectionKey.split('_');
+      const subSection = subSectionParts.length > 0 ? subSectionParts.join('_') : undefined;
+      
+      conversationLog.conversations[sectionKey] = {
+        section: categoryLabels[category as Category] || category,
+        subSection,
+        messages: messages.map(msg => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp.toISOString(),
+        })),
+      };
+    });
+
+    return conversationLog;
+  };
+
   // 대화 로그를 JSON 파일로 자동 다운로드
   const downloadConversationLog = () => {
     try {
-      // 이름을 제외한 환자 정보
-      const { name, ...patientInfoWithoutName } = patientInfo;
-      const conversationLog: ConversationLog = {
-        patientInfo: patientInfoWithoutName,
-        medicalRecordId,
-        sessionId: sessionIdRef.current,
-        startTime: sessionStartTimeRef.current,
-        endTime: new Date().toISOString(),
-        conversations: {},
-        medicalRecordAnalysis: medicalRecordAnalysis || undefined,
-      };
-
-      // messagesBySection을 conversations 객체로 변환
-      messagesBySection.forEach((messages, sectionKey) => {
-        const [category, ...subSectionParts] = sectionKey.split('_');
-        const subSection = subSectionParts.length > 0 ? subSectionParts.join('_') : undefined;
-        
-        conversationLog.conversations[sectionKey] = {
-          section: categoryLabels[category as Category] || category,
-          subSection,
-          messages: messages.map(msg => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp.toISOString(),
-          })),
-        };
-      });
-
+      const conversationLog = createConversationLog();
       const json = JSON.stringify(conversationLog, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1859,8 +1865,9 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
                 // 최종 대화 로그 저장 및 자동 다운로드 후 다음 페이지로 이동
                 setTimeout(() => {
                   saveConversationToLocalStorage();
+                  const conversationLog = createConversationLog();
                   downloadConversationLog(); // 자동 다운로드
-                  onConversationComplete();
+                  onConversationComplete(conversationLog); // conversation log 전달
                 }, 1000);
               }
               

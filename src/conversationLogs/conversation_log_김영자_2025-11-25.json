@@ -1,0 +1,464 @@
+{
+  "patientInfo": {
+    "name": "김영자",
+    "gender": "여성",
+    "birthYear": "1969",
+    "birthMonth": "5",
+    "birthDay": "23",
+    "phone": ""
+  },
+  "medicalRecordId": "record-1764086382223",
+  "sessionId": "session-1764086841926-nrbn91k2g",
+  "startTime": "2025-11-25T16:07:21.926Z",
+  "endTime": "2025-11-25T16:23:16.996Z",
+  "conversations": {
+    "main_diagnosis_intro": {
+      "section": "main",
+      "subSection": "diagnosis_intro",
+      "messages": [
+        {
+          "id": "main_diagnosis_intro_0_1764086841939",
+          "role": "assistant",
+          "content": "김영자님의 기본 정보들을 토대로, 이제 본격적으로 주요 진단 내용에 대해서 이야기해볼게요.",
+          "timestamp": "2025-11-25T16:07:21.939Z"
+        },
+        {
+          "id": "main_diagnosis_intro_1_1764086842733",
+          "role": "assistant",
+          "content": "김영자님의 지난 진료 결과, '수두증'이 의심된다고 진단을 받으셨습니다.",
+          "timestamp": "2025-11-25T16:07:22.733Z"
+        },
+        {
+          "id": "main_diagnosis_intro_2_1764086843534",
+          "role": "assistant",
+          "content": "'수두증'의 주요 증상과 관련해 몇 가지 질문을 드릴게요.",
+          "timestamp": "2025-11-25T16:07:23.534Z"
+        },
+        {
+          "id": "main_diagnosis_intro_3_1764086844334",
+          "role": "assistant",
+          "content": "이제 왼쪽 위에 '인지 기능 저하'을(를) 클릭해 문진을 시작해주세요.",
+          "timestamp": "2025-11-25T16:07:24.334Z"
+        }
+      ]
+    },
+    "main_diagnosis_diagnosis_a": {
+      "section": "main",
+      "subSection": "diagnosis_diagnosis_a",
+      "messages": [
+        {
+          "id": "main_diagnosis_diagnosis_a_assistant_intro_1764086852071",
+          "role": "assistant",
+          "content": "먼저 인지 기능 저하에 대한 질문입니다.",
+          "timestamp": "2025-11-25T16:07:32.071Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_a_assistant_initial_1764086852071",
+          "role": "assistant",
+          "content": "지난번에 인지 기능 저하 증상은 없었다고 하시긴 했는데, 지금은 어떠신가요?",
+          "timestamp": "2025-11-25T16:07:32.071Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_a_user_1764086916731",
+          "role": "user",
+          "content": "지금도 괜찮긴 한데 가끔씩 깜박하는 것 같아요",
+          "timestamp": "2025-11-25T16:08:36.731Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_a_assistant_1764086919508",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:08:39.508Z"
+        }
+      ]
+    },
+    "main_diagnosis_diagnosis_b": {
+      "section": "main",
+      "subSection": "diagnosis_diagnosis_b",
+      "messages": [
+        {
+          "id": "main_diagnosis_diagnosis_b_assistant_intro_1764086922012",
+          "role": "assistant",
+          "content": "다음으로는 다리 근력 저하에 대한 질문입니다.",
+          "timestamp": "2025-11-25T16:08:42.012Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_b_assistant_initial_1764086922012",
+          "role": "assistant",
+          "content": "지난번 방문때 다리 근력 저하 증상을 이야기해주셨네요. 혹시 기억나시나요?",
+          "timestamp": "2025-11-25T16:08:42.012Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_b_user_1764086937391",
+          "role": "user",
+          "content": "네 그런 것 같아요",
+          "timestamp": "2025-11-25T16:08:57.391Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_b_assistant_1764086938634",
+          "role": "assistant",
+          "content": "지난 방문 이후 증상이 회복되었는지, 그대로인지, 아니면 더 악화되었는지 말씀해주실 수 있을까요?",
+          "timestamp": "2025-11-25T16:08:58.634Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_b_user_1764086963823",
+          "role": "user",
+          "content": "운동을 했더니 조금 더 괜찮아진 것 같긴 한데 아직도 다리가 좀 아프긴하네요",
+          "timestamp": "2025-11-25T16:09:23.823Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_b_assistant_1764086964749",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:09:24.749Z"
+        }
+      ]
+    },
+    "main_diagnosis_diagnosis_c": {
+      "section": "main",
+      "subSection": "diagnosis_diagnosis_c",
+      "messages": [
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_intro_1764086967251",
+          "role": "assistant",
+          "content": "다음으로는 소변 기능 저하에 대한 질문입니다.",
+          "timestamp": "2025-11-25T16:09:27.251Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_initial_1764086967251",
+          "role": "assistant",
+          "content": "지난번에는 소변 기능 저하 증상에 대해 이야기하지 않았었는데, 혹시 지난 방문 이후에 이 증상이 새롭게 나타난 적이 있으신가요?",
+          "timestamp": "2025-11-25T16:09:27.251Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_user_1764087263456",
+          "role": "user",
+          "content": "네",
+          "timestamp": "2025-11-25T16:14:23.456Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_1764087264678",
+          "role": "assistant",
+          "content": "언제부터 소변 기능 저하 증상이 시작되었는지 알 수 있을까요?",
+          "timestamp": "2025-11-25T16:14:24.678Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_user_1764087291154",
+          "role": "user",
+          "content": "한 일주일 전부터 화장실 가기가 어려웠던 것 같아요",
+          "timestamp": "2025-11-25T16:14:51.154Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_1764087292327",
+          "role": "assistant",
+          "content": "주로 어떨 때 소변 기능 저하 증상이 가장 심하게 나타나는지 알 수 있을까요?",
+          "timestamp": "2025-11-25T16:14:52.327Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_user_1764087339197",
+          "role": "user",
+          "content": "화장실을 오래 못가고 있다가 가게 될 때 그러는 것 같은데 확실하진 않아요",
+          "timestamp": "2025-11-25T16:15:39.197Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_1764087341627",
+          "role": "assistant",
+          "content": "소변 기능 저하 증상이 얼마나 자주 발생하며, 강도는 어느 정도인가요? 예를 들어, 매일 발생하는지, 가벼운 불편함인지 아니면 심각한 문제인지 말씀해 주시면 도움이 됩니다.",
+          "timestamp": "2025-11-25T16:15:41.627Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_user_1764087356485",
+          "role": "user",
+          "content": "가벼운 불편함으로 한 일주일에 한번?",
+          "timestamp": "2025-11-25T16:15:56.485Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_1764087360219",
+          "role": "assistant",
+          "content": "소변 기능 저하 증상이 일상생활에 어떤 영향을 미치고 있는지 말씀해 주실 수 있을까요? 예를 들어, 일이나 일상적인 활동에 방해가 되는지 궁금합니다.",
+          "timestamp": "2025-11-25T16:16:00.219Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_user_1764087373241",
+          "role": "user",
+          "content": "가끔 그렇긴 한데 자주는 아니에요",
+          "timestamp": "2025-11-25T16:16:13.241Z"
+        },
+        {
+          "id": "main_diagnosis_diagnosis_c_assistant_1764087374444",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:16:14.444Z"
+        }
+      ]
+    },
+    "main_diagnosis_examination": {
+      "section": "main",
+      "subSection": "diagnosis_examination",
+      "messages": [
+        {
+          "id": "main_diagnosis_examination_assistant_examination_0_1764087376947",
+          "role": "assistant",
+          "content": "지난번에 CT 검사을(를) 받으셨네요.",
+          "timestamp": "2025-11-25T16:16:16.947Z"
+        },
+        {
+          "id": "main_diagnosis_examination_assistant_examination_1_1764087377749",
+          "role": "assistant",
+          "content": "혹시 CT 검사과 관련해서 의사에게 전달하거나 질문하고 싶은 게 있으신가요?",
+          "timestamp": "2025-11-25T16:16:17.749Z"
+        },
+        {
+          "id": "main_diagnosis_examination_assistant_examination_2_1764087378548",
+          "role": "assistant",
+          "content": "예를 들어, 받았던 검사의 목적이 무엇이었는지, 다음에 또 다른 검사도 계획되어 있는지, 검사 결과에 대해 궁금하신 점이 있으시면 말씀해주세요.",
+          "timestamp": "2025-11-25T16:16:18.548Z"
+        },
+        {
+          "id": "main_diagnosis_examination_user_1764087567332",
+          "role": "user",
+          "content": "검사 결과가 어떤지 궁금하네요",
+          "timestamp": "2025-11-25T16:19:27.332Z"
+        },
+        {
+          "id": "main_diagnosis_examination_assistant_1764087568808",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:19:28.808Z"
+        }
+      ]
+    },
+    "new_pain_intro": {
+      "section": "new",
+      "subSection": "pain_intro",
+      "messages": [
+        {
+          "id": "new_pain_intro_0_1764087575365",
+          "role": "assistant",
+          "content": "김영자님, 다음으로는 주요 진단 내용과 관련된 내용 외에, 다른 증상들에 대해서 몇 가지 질문을 드릴게요.",
+          "timestamp": "2025-11-25T16:19:35.365Z"
+        },
+        {
+          "id": "new_pain_intro_1_1764087576863",
+          "role": "assistant",
+          "content": "위의 '그 외 통증'을 눌러서 문답을 시작해주세요.",
+          "timestamp": "2025-11-25T16:19:36.863Z"
+        }
+      ]
+    },
+    "new_pain_other_pain": {
+      "section": "new",
+      "subSection": "pain_other_pain",
+      "messages": [
+        {
+          "id": "new_pain_other_pain_assistant_intro_1764087586965",
+          "role": "assistant",
+          "content": "지난번에 손떨림을(를) 언급해주셨는데, 혹시 기억나시나요?",
+          "timestamp": "2025-11-25T16:19:46.965Z"
+        },
+        {
+          "id": "new_pain_other_pain_user_1764087593592",
+          "role": "user",
+          "content": "네",
+          "timestamp": "2025-11-25T16:19:53.592Z"
+        },
+        {
+          "id": "new_pain_other_pain_assistant_1764087594920",
+          "role": "assistant",
+          "content": "지난 방문 이후로 증상이 회복되었는지, 그대로인지, 아니면 더 악화되었는지 말씀해주실 수 있을까요?",
+          "timestamp": "2025-11-25T16:19:54.920Z"
+        },
+        {
+          "id": "new_pain_other_pain_user_1764087605162",
+          "role": "user",
+          "content": "더 악화 되었어요",
+          "timestamp": "2025-11-25T16:20:05.162Z"
+        },
+        {
+          "id": "new_pain_other_pain_assistant_1764087606901",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:20:06.901Z"
+        }
+      ]
+    },
+    "new_pain_new_pain": {
+      "section": "new",
+      "subSection": "pain_new_pain",
+      "messages": [
+        {
+          "id": "new_pain_new_pain_hardcoded_1764087609403",
+          "role": "assistant",
+          "content": "다음으로는 새로운 통증에 대한 질문입니다.",
+          "timestamp": "2025-11-25T16:20:09.403Z"
+        },
+        {
+          "id": "new_pain_new_pain_gpt_1764087612003",
+          "role": "assistant",
+          "content": "앞에서 이야기한 증상들 외에, 혹시 최근 들어 새로 생긴 증상들이 있을까요? 예를 들어, 두통이 심해진다거나 어지러움이 느껴진다거나, 아니면 시야가 흐려지는 등의 변화가 있었는지 자유롭게 이야기해 주세요.",
+          "timestamp": "2025-11-25T16:20:12.003Z"
+        },
+        {
+          "id": "new_pain_new_pain_user_1764087621862",
+          "role": "user",
+          "content": "아니요 괜찮았엉",
+          "timestamp": "2025-11-25T16:20:21.862Z"
+        },
+        {
+          "id": "new_pain_new_pain_assistant_1764087624990",
+          "role": "assistant",
+          "content": "알겠습니다. 새롭게 생긴 증상은 없다고 하셨으니, 이전에 말씀하신 증상들에 대해 좀 더 확인해볼게요. 혹시 두통이나 다른 증상들에 대해 의사에게 특별히 전달하고 싶거나 추가적으로 물어보고 싶은 것이 있을까요?",
+          "timestamp": "2025-11-25T16:20:24.990Z"
+        },
+        {
+          "id": "new_pain_new_pain_user_1764087661839",
+          "role": "user",
+          "content": "아니요 없어요",
+          "timestamp": "2025-11-25T16:21:01.839Z"
+        },
+        {
+          "id": "new_pain_new_pain_assistant_1764087662812",
+          "role": "assistant",
+          "content": "두통이나 복통 같은 증상들이 언제부터 시작되었는지 알려주실 수 있나요?",
+          "timestamp": "2025-11-25T16:21:02.812Z"
+        }
+      ]
+    },
+    "side_effects_intro": {
+      "section": "side",
+      "subSection": "effects_intro",
+      "messages": [
+        {
+          "id": "side_effects_intro_1764087691625",
+          "role": "assistant",
+          "content": "김영자님, 다음으로는 부작용에 대해 질문을 드릴게요. '복용 약'을 클릭해 질문해 답해주세요.",
+          "timestamp": "2025-11-25T16:21:31.625Z"
+        }
+      ]
+    },
+    "side_effects_medication": {
+      "section": "side",
+      "subSection": "effects_medication",
+      "messages": [
+        {
+          "id": "side_effects_medication_hardcoded_1764087699360",
+          "role": "assistant",
+          "content": "지난번에 뇌 영양제 약을 처방받으셨네요.",
+          "timestamp": "2025-11-25T16:21:39.360Z"
+        },
+        {
+          "id": "side_effects_medication_gpt_1764087700463",
+          "role": "assistant",
+          "content": "혹시 그 약을 드시고 나서 몸에 이상한 점이나 불편한 점이 있으셨나요? 예를 들어, 소화가 잘 안 되거나, 어지럽거나, 두통이 있으신지요?",
+          "timestamp": "2025-11-25T16:21:40.463Z"
+        },
+        {
+          "id": "side_effects_medication_user_1764087707453",
+          "role": "user",
+          "content": "아니요 괜찮았어요",
+          "timestamp": "2025-11-25T16:21:47.453Z"
+        },
+        {
+          "id": "side_effects_medication_assistant_1764087709199",
+          "role": "assistant",
+          "content": "답변 감사합니다. 다음 질문으로 넘어가볼게요.",
+          "timestamp": "2025-11-25T16:21:49.199Z"
+        }
+      ]
+    },
+    "additional_questions_intro": {
+      "section": "additional",
+      "subSection": "questions_intro",
+      "messages": [
+        {
+          "id": "additional_questions_intro_1764087712747",
+          "role": "assistant",
+          "content": "김영자님, 문진이 거의 완료되었습니다. 마지막으로 '추가 질문'을 클릭해 마지막 문답을 해주세요.",
+          "timestamp": "2025-11-25T16:21:52.747Z"
+        }
+      ]
+    },
+    "additional_questions_additional_question": {
+      "section": "additional",
+      "subSection": "questions_additional_question",
+      "messages": [
+        {
+          "id": "additional_questions_additional_question_hardcoded_1764087715714",
+          "role": "assistant",
+          "content": "추가질문 항목입니다.",
+          "timestamp": "2025-11-25T16:21:55.714Z"
+        },
+        {
+          "id": "additional_questions_additional_question_gpt_1764087716777",
+          "role": "assistant",
+          "content": "김영자님, 오늘 진료 중에 의사선생님께 꼭 전하고 싶은 게 있으신가요? 지난번 진료 이후 궁금했던 점이나, 운동이나 식사에 관한 질문도 괜찮습니다.",
+          "timestamp": "2025-11-25T16:21:56.777Z"
+        },
+        {
+          "id": "additional_questions_additional_question_user_1764087738104",
+          "role": "user",
+          "content": "운동을 하기 시작했는데 너무 금방 피곤해지고 오히려 컨디션이 안좋아지는 것 같아서 걱정이에요",
+          "timestamp": "2025-11-25T16:22:18.104Z"
+        },
+        {
+          "id": "additional_questions_additional_question_assistant_1764087740506",
+          "role": "assistant",
+          "content": "운동을 시작하신 지 얼마나 되셨나요, 김영자님? 그리고 어떤 종류의 운동을 하고 계신지도 궁금해요. 혹시 다른 증상도 함께 느끼고 계신지요?",
+          "timestamp": "2025-11-25T16:22:20.506Z"
+        },
+        {
+          "id": "additional_questions_additional_question_user_1764087775450",
+          "role": "user",
+          "content": "산책을 하는데 그냥 피곤해지는 증상만 있는 것 같아요",
+          "timestamp": "2025-11-25T16:22:55.450Z"
+        },
+        {
+          "id": "additional_questions_additional_question_assistant_1764087777602",
+          "role": "assistant",
+          "content": "산책을 시작한 지 얼마 되셨나요, 김영자님? 혹시 산책 전에 충분히 물을 드시고 계신지도 궁금해요. 물을 충분히 마시는 것도 중요하거든요. 추가로 궁금한 점이 있으신가요?",
+          "timestamp": "2025-11-25T16:22:57.602Z"
+        }
+      ]
+    }
+  },
+  "medicalRecordAnalysis": {
+    "mainDiagnosis": "수두증",
+    "symptoms": [
+      {
+        "name": "인지 기능 저하",
+        "mentioned": true,
+        "present": false,
+        "bodyPart": "head"
+      },
+      {
+        "name": "다리 근력 저하",
+        "mentioned": true,
+        "present": true,
+        "bodyPart": "leg"
+      },
+      {
+        "name": "소변 기능 저하",
+        "mentioned": false,
+        "present": false,
+        "bodyPart": "hip"
+      }
+    ],
+    "otherSymptoms": [
+      {
+        "name": "손떨림",
+        "mentioned": true,
+        "bodyPart": "hand"
+      }
+    ],
+    "examinations": [
+      {
+        "name": "CT 검사"
+      }
+    ],
+    "medications": [
+      {
+        "name": "뇌 영양제"
+      }
+    ]
+  }
+}
