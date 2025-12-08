@@ -6,13 +6,16 @@ import AnalysisPage from "./components/AnalysisPage";
 import SummaryPage from "./components/SummaryPage";
 import { MedicalRecordAnalysis } from "./services/gpt-common";
 import { ConversationLog } from "./components/ChatInterface";
+import { USE_BIRTHDATE_VERSION } from "./config/patient-info";
+
 
 export interface PatientInfo {
   name: string;
   gender: string;
-  birthYear: string;
-  birthMonth: string;
-  birthDay: string;
+  age: string; // 만 나이 (USE_BIRTHDATE_VERSION이 false일 때 사용)
+  birthYear?: string; // 생년월일 (USE_BIRTHDATE_VERSION이 true일 때 사용)
+  birthMonth?: string;
+  birthDay?: string;
 }
 
 function App() {
@@ -61,7 +64,13 @@ function App() {
       };
 
       // 로컬 스토리지에 초기 로그 저장
-      const storageKey = `conversation_log_${newPatientId}_${medicalRecordId}`;
+      let storageKey: string;
+      if (USE_BIRTHDATE_VERSION && info.birthYear && info.birthMonth && info.birthDay) {
+        const birthDate = `${info.birthYear}-${info.birthMonth.padStart(2, '0')}-${info.birthDay.padStart(2, '0')}`;
+        storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
+      } else {
+        storageKey = `conversation_log_age${info.age}_${medicalRecordId}`;
+      }
       localStorage.setItem(storageKey, JSON.stringify(initialLog));
     }
 
@@ -71,7 +80,7 @@ function App() {
   const handleConversationComplete = (log: ConversationLog) => {
     setConversationLog(log);
     setShowChat(false);
-    setShowSummary(true); // Analysis 페이지를 건너뛰고 바로 Summary 페이지로 이동
+    setShowAnalysis(true); // Analysis 페이지를 먼저 표시
   };
 
   const handleAnalysisComplete = () => {
@@ -92,14 +101,32 @@ function App() {
     setConversationLog(null);
   };
 
+  // 개발 중: Summary 페이지만 표시
+  // return <SummaryPage onComplete={handleSummaryComplete} />;
+
   // 1단계: 진료 기록 업로드 및 분석
   if (!medicalRecordId) {
     return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
   }
 
-  // 2단계: 환자 정보 입력
-  if (!showChat) {
-    return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
+  // 5단계: 요약 페이지 (conversation log가 있을 때만) - 가장 높은 우선순위
+  if (showSummary && conversationLog) {
+    return (
+      <SummaryPage
+        conversationLog={conversationLog}
+        onComplete={handleSummaryComplete}
+      />
+    );
+  }
+
+  // 4단계: 분석 중 페이지 (챗봇 완료 후)
+  if (showAnalysis && patientInfo) {
+    return (
+      <AnalysisPage
+        patientInfo={patientInfo}
+        onComplete={handleAnalysisComplete}
+      />
+    );
   }
 
   // 3단계: 챗봇 인터페이스
@@ -118,25 +145,8 @@ function App() {
     );
   }
 
-  // 4단계: 분석 중 페이지 (선택적)
-  if (showAnalysis && patientInfo && !showSummary) {
-    return (
-      <AnalysisPage
-        patientInfo={patientInfo}
-        onComplete={handleAnalysisComplete}
-      />
-    );
-  }
-
-  // 5단계: 요약 페이지 (conversation log가 있을 때만)
-  if (showSummary && conversationLog) {
-    return (
-      <SummaryPage
-        conversationLog={conversationLog}
-        onComplete={handleSummaryComplete}
-      />
-    );
-  }
+  // 2단계: 환자 정보 입력 (showChat이 false이고 다른 페이지가 표시되지 않을 때만)
+  return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
 
   return null;
 }

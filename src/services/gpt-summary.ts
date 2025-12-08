@@ -1,6 +1,7 @@
 import { callGPTAPI, GPTMessage } from "./gpt-common";
 import { ConversationLog } from "../components/ChatInterface";
 import { BodyPart } from "../components/HumanModel/HumanModel3D";
+import { USE_BIRTHDATE_VERSION } from "../config/patient-info";
 
 export type SymptomTrend = "worse" | "same" | "better" | "new" | "no symptom";
 
@@ -30,8 +31,8 @@ export async function generateSummary(
     "main_diagnosis_diagnosis_a",
     "main_diagnosis_diagnosis_b",
     "main_diagnosis_diagnosis_c",
-    "new_pain_other_pain",
-    "new_pain_new_pain",
+    "other_new_pain_other_pain",
+    "other_new_pain_new_pain",
   ];
   const additionalSectionKeys = [
     "additional_questions_additional_question",
@@ -374,8 +375,15 @@ function parseNotesResponse(
 
 function formatMedicalRecord(conversationLog: ConversationLog): string {
   let text = `환자 정보:
-- 성별: ${conversationLog.patientInfo.gender}
-- 생년월일: ${conversationLog.patientInfo.birthYear}-${conversationLog.patientInfo.birthMonth}-${conversationLog.patientInfo.birthDay}
+- 성별: ${conversationLog.patientInfo.gender}`;
+  
+  if (USE_BIRTHDATE_VERSION && conversationLog.patientInfo.birthYear && conversationLog.patientInfo.birthMonth && conversationLog.patientInfo.birthDay) {
+    text += `\n- 생년월일: ${conversationLog.patientInfo.birthYear}-${conversationLog.patientInfo.birthMonth}-${conversationLog.patientInfo.birthDay}`;
+  } else if (conversationLog.patientInfo.age) {
+    text += `\n- 나이: ${conversationLog.patientInfo.age}세`;
+  }
+  
+  text += `
 
 `;
 

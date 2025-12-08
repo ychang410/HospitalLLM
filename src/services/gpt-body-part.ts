@@ -110,21 +110,21 @@ export async function extractSymptomsFromMessage(patientMessage: string): Promis
 **매우 중요:**
 1. 먼저 환자가 새로운 증상이 있다고 답했는지, 없다고 답했는지를 정확하게 판단하세요.
 2. 환자가 증상이 없다고 답했으면 (예: "없다", "없어요", "없습니다", "없음", "없네요" 등) "없음"이라고만 응답하세요.
-3. 환자가 증상이 있다고 답했거나, 구체적인 증상을 언급했다면, 실제로 언급된 증상 이름들만 추출하세요.
+3. 환자가 증상이 있다고 답했거나, 구체적인 증상을 언급했다면, 실제로 언급된 증상 중 **가장 먼저 언급된 증상 하나만** 추출하세요.
 4. 환자가 실제로 언급하지 않은 증상은 절대 추출하지 마세요 (hallucination 금지).
-5. 여러 증상이 언급되었을 수 있습니다 (예: "두통과 복통", "머리랑 가슴 통증" 등)
-6. 각 증상을 개별적으로 추출해주세요
-7. 증상 이름만 추출하고, 다른 설명은 제외해주세요
+5. 여러 증상이 언급되었더라도 **첫 번째 증상만** 추출하세요.
+6. 증상 이름만 추출하고, 다른 설명은 제외해주세요
 
 응답 형식:
 - 증상이 없으면: "없음"
-- 증상이 있으면: "증상1, 증상2, 증상3" (쉼표로 구분)
+- 증상이 있으면: "증상명" (하나만, 쉼표 없이)
 
 예시:
 - "없어요" → "없음"
 - "없습니다" → "없음"
-- "두통이랑 가슴통증이 있어요" → "두통, 가슴통증"
-- "머리랑 배가 아파요" → "두통, 복통"`;
+- "두통이랑 가슴통증이 있어요" → "두통" (첫 번째 증상만)
+- "머리랑 배가 아파요" → "두통" (첫 번째 증상만)
+- "복통이 있어요" → "복통"`;
 
   const messages: GPTMessage[] = [
     {
@@ -147,13 +147,18 @@ export async function extractSymptomsFromMessage(patientMessage: string): Promis
       return [];
     }
     
-    // 쉼표로 구분된 증상 이름들 추출
-    const symptoms = trimmedResponse
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.includes('없음') && !s.includes('없'));
+    // 첫 번째 증상만 추출 (쉼표가 있으면 첫 번째만, 없으면 전체)
+    const symptom = trimmedResponse.split(',')[0].trim();
     
-    console.log(`증상 추출: "${patientMessage}" → [${symptoms.join(', ')}]`);
+    // "없음"이 포함되어 있으면 빈 배열 반환
+    if (symptom.includes('없음') || symptom.includes('없') || symptom.length === 0) {
+      console.log(`증상 추출: "${patientMessage}" → [] (증상 없음)`);
+      return [];
+    }
+    
+    // 첫 번째 증상만 반환
+    const symptoms = [symptom];
+    console.log(`증상 추출: "${patientMessage}" → [${symptom}] (첫 번째 증상만)`);
     return symptoms;
   } catch (error: any) {
     console.error('증상 추출 오류:', error);

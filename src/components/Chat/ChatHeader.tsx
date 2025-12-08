@@ -12,7 +12,7 @@ interface ChatHeaderProps {
 
 const categories: { key: Category; label: string }[] = [
   { key: 'main_diagnosis', label: '주요 진단 내용' },
-  { key: 'new_pain', label: '그외/새로운 통증' },
+  { key: 'other_new_pain', label: '그외/새로운 통증' },
   { key: 'side_effects', label: '부작용' },
   { key: 'additional_questions', label: '기타' },
 ];

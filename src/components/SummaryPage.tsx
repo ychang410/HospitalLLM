@@ -13,6 +13,10 @@ import DoctorPage from "./DoctorPage";
 
 interface SummaryPageProps {
   conversationLog?: ConversationLog; // conversation log를 props로 받음
+  birthYear?: string; // 기존 로직 유지를 위해 optional로 변경
+  birthMonth?: string;
+  birthDay?: string;
+  medicalRecordId?: string;
   onComplete?: () => void;
 }
 
@@ -43,6 +47,10 @@ type EditingState =
 
 export default function SummaryPage({
   conversationLog: propConversationLog,
+  birthYear,
+  birthMonth,
+  birthDay,
+  medicalRecordId,
   onComplete,
 }: SummaryPageProps) {
   const [summary, setSummary] = useState<StructuredSummary | null>(null);
@@ -50,29 +58,81 @@ export default function SummaryPage({
   const [error, setError] = useState<string | null>(null);
   const [showDoctorPage, setShowDoctorPage] = useState(false);
   const [editingState, setEditingState] = useState<EditingState>(null);
+  const [conversationLog, setConversationLog] = useState<ConversationLog | null>(null);
+  const [showFileInput, setShowFileInput] = useState(false);
+
+  // 파일 선택 핸들러
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const conversationLogData: ConversationLog = JSON.parse(text);
+      setConversationLog(conversationLogData);
+      
+      const generatedSummary = await generateSummary(conversationLogData);
+      setSummary(generatedSummary);
+      setIsLoading(false);
+      setShowFileInput(false);
+    } catch (err: any) {
+      console.error("파일 읽기 오류:", err);
+      setError("파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.");
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadAndGenerateSummary = async () => {
-      // props로 받은 conversation log가 없으면 에러
-      if (!propConversationLog) {
-        setError("대화 로그가 없습니다.");
-        setIsLoading(false);
+      // props로 받은 conversation log가 있으면 그것을 사용
+      if (propConversationLog) {
+        try {
+          setConversationLog(propConversationLog);
+          const generatedSummary = await generateSummary(propConversationLog);
+          setSummary(generatedSummary);
+          setIsLoading(false);
+        } catch (err: any) {
+          console.error("요약 생성 오류:", err);
+          setError(err.message || "요약 생성 중 오류가 발생했습니다.");
+          setIsLoading(false);
+        }
         return;
       }
 
+      // props로 받은 conversation log가 없으면 기존 로직 사용
       try {
-        const generatedSummary = await generateSummary(propConversationLog);
-        setSummary(generatedSummary);
+        if (!birthYear || !birthMonth || !birthDay || !medicalRecordId) {
+          setError("대화 로그가 없습니다.");
+          setIsLoading(false);
+          return;
+        }
+
+        // 먼저 로컬 스토리지에서 시도
+        const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
+        const storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
+        const storedLog = localStorage.getItem(storageKey);
+        
+        if (storedLog) {
+          const conversationLogData: ConversationLog = JSON.parse(storedLog);
+          setConversationLog(conversationLogData);
+          
+          const generatedSummary = await generateSummary(conversationLogData);
+          setSummary(generatedSummary);
+          setIsLoading(false);
+        } else {
+          // 로컬 스토리지에 없으면 파일 선택 다이얼로그 표시
+          setShowFileInput(true);
+          setIsLoading(false);
+        }
       } catch (err: any) {
         console.error("요약 생성 오류:", err);
         setError(err.message || "요약 생성 중 오류가 발생했습니다.");
-      } finally {
         setIsLoading(false);
       }
     };
 
     loadAndGenerateSummary();
-  }, [propConversationLog]);
+  }, [propConversationLog, birthYear, birthMonth, birthDay, medicalRecordId]);
 
   // progress 값에 따라 증상을 분류 (카테고리 정보 포함)
   const getSymptomStatusItems = useMemo(() => {
@@ -440,6 +500,33 @@ export default function SummaryPage({
     );
   }
 
+  if (showFileInput) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-2xl mx-auto px-4">
+          <div className="mb-8">
+            <div className="text-blue-500 text-6xl mb-4">📁</div>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">
+            대화 로그 파일 선택
+          </h2>
+          <p className="text-gray-600 text-lg mb-8">
+            patient_data 폴더에서 conversation log JSON 파일을 선택해주세요.
+          </p>
+          <label className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer">
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            파일 선택
+          </label>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-50">
@@ -473,11 +560,11 @@ export default function SummaryPage({
   }
 
   // 의사용 페이지 표시
-  if (showDoctorPage && summary && propConversationLog) {
+  if (showDoctorPage && summary && conversationLog) {
     return (
       <DoctorPage
         summary={summary}
-        conversationLog={propConversationLog}
+        conversationLog={conversationLog}
         onComplete={handleDoctorPageComplete}
         onBack={handleDoctorPageBack}
       />

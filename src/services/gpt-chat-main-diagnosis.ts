@@ -18,6 +18,46 @@ export interface SymptomChatResponse {
   questionCount?: number; // 현재까지 물어본 질문 개수
 }
 
+// 하드코딩 메시지 헬퍼
+export const getMainDiagnosisIntroMessages = (
+  patientName: string,
+  mainDiagnosis: string,
+  firstSymptomName: string
+): string[] => [
+  `${patientName}님의 기본 정보들을 토대로, 이제 본격적으로 주요 진단 내용에 대해서 이야기해볼게요.`,
+  `${patientName}님의 지난 진료 결과, '${mainDiagnosis}'이 의심된다고 진단을 받으셨습니다.`,
+  `'${mainDiagnosis}'의 주요 증상과 관련해 몇 가지 질문을 드릴게요.`,
+  `이제 왼쪽 위에 '${firstSymptomName}'을(를) 클릭해 문진을 시작해주세요.`,
+];
+
+export const getSymptomIntroMessage = (subSectionIndex: number, symptomName: string) =>
+  subSectionIndex === 0
+    ? `먼저 ${symptomName}에 대한 질문입니다.`
+    : `다음으로는 ${symptomName}에 대한 질문입니다.`;
+
+export const getSymptomInitialQuestion = (
+  mentioned: boolean,
+  present: boolean,
+  symptomName: string
+) => {
+  if (!mentioned) {
+    return `지난번에는 ${symptomName} 증상에 대해 이야기하지 않았었는데, 혹시 지난 방문 이후에 이 증상이 새롭게 나타난 적이 있으신가요?`;
+  }
+  if (present) {
+    return `지난번 방문때 ${symptomName} 증상을 이야기해주셨네요. 혹시 기억나시나요?`;
+  }
+  return `지난번에 ${symptomName} 증상은 없었다고 하시긴 했는데, 지금은 어떠신가요?`;
+};
+
+export const getExaminationMessages = (examinationName: string): string[] => [
+  `지난번에 ${examinationName}을(를) 받으셨네요.`,
+  `혹시 ${examinationName} 관련해서 의사에게 전달하거나 질문하고 싶은 게 있으신가요?`,
+  `예를 들어, 받았던 검사의 목적이 무엇이었는지, 다음에 또 다른 검사도 계획되어 있는지, 검사 결과에 대해 궁금하신 점이 있으시면 말씀해주세요.`,
+];
+
+export const getMainDiagnosisCompletionMessage = () =>
+  '답변 감사합니다. 다음 질문으로 넘어가볼게요.';
+
 /**
  * 증상에 대한 문진을 진행하는 함수 (라우터)
  * 
