@@ -25,6 +25,7 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [conversationLog, setConversationLog] = useState<ConversationLog | null>(null);
 
   const handleUploadComplete = (
     file: File | null,
@@ -67,9 +68,10 @@ function App() {
     setShowChat(true);
   };
 
-  const handleConversationComplete = () => {
+  const handleConversationComplete = (log: ConversationLog) => {
+    setConversationLog(log);
     setShowChat(false);
-    setShowAnalysis(true);
+    setShowSummary(true); // Analysis 페이지를 건너뛰고 바로 Summary 페이지로 이동
   };
 
   const handleAnalysisComplete = () => {
@@ -87,60 +89,56 @@ function App() {
     setMedicalRecordAnalysis(null);
     setPatientInfo(null);
     setPatientId(null);
+    setConversationLog(null);
   };
 
-  // 개발 중: Summary 페이지만 표시
-  return <SummaryPage onComplete={handleSummaryComplete} />;
-
   // 1단계: 진료 기록 업로드 및 분석
-  // if (!medicalRecordId) {
-  //   return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
-  // }
+  if (!medicalRecordId) {
+    return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
+  }
 
   // 2단계: 환자 정보 입력
-  // if (!showChat) {
-  //   return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
-  // }
+  if (!showChat) {
+    return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
+  }
 
   // 3단계: 챗봇 인터페이스
-  // if (showChat) {
-  //   return (
-  //     <div className="w-full h-screen flex items-center justify-center bg-gray-50">
-  //       <ChatInterface
-  //         patientInfo={patientInfo!}
-  //         medicalRecord={medicalRecord}
-  //         patientId={patientId!}
-  //         medicalRecordId={medicalRecordId!}
-  //         medicalRecordAnalysis={medicalRecordAnalysis}
-  //         onConversationComplete={handleConversationComplete}
-  //       />
-  //     </div>
-  //   );
-  // }
+  if (showChat && !showSummary) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50">
+        <ChatInterface
+          patientInfo={patientInfo!}
+          medicalRecord={medicalRecord}
+          patientId={patientId!}
+          medicalRecordId={medicalRecordId!}
+          medicalRecordAnalysis={medicalRecordAnalysis}
+          onConversationComplete={handleConversationComplete}
+        />
+      </div>
+    );
+  }
 
-  // 4단계: 분석 중 페이지
-  // if (showAnalysis && patientInfo) {
-  //   return (
-  //     <AnalysisPage
-  //       patientInfo={patientInfo}
-  //       onComplete={handleAnalysisComplete}
-  //     />
-  //   );
-  // }
+  // 4단계: 분석 중 페이지 (선택적)
+  if (showAnalysis && patientInfo && !showSummary) {
+    return (
+      <AnalysisPage
+        patientInfo={patientInfo}
+        onComplete={handleAnalysisComplete}
+      />
+    );
+  }
 
-  // 5단계: 요약 페이지
-  // if (showSummary && patientInfo && patientId && medicalRecordId) {
-  //   return (
-  //     <SummaryPage
-  //       patientInfo={patientInfo}
-  //       patientId={patientId}
-  //       medicalRecordId={medicalRecordId}
-  //       onComplete={handleSummaryComplete}
-  //     />
-  //   );
-  // }
+  // 5단계: 요약 페이지 (conversation log가 있을 때만)
+  if (showSummary && conversationLog) {
+    return (
+      <SummaryPage
+        conversationLog={conversationLog}
+        onComplete={handleSummaryComplete}
+      />
+    );
+  }
 
-  // return null;
+  return null;
 }
 
 export default App;

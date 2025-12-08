@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ConversationLog } from "./ChatInterface";
-import conversationLogData from "../conversationLogs/conversation_log_김영자_2025-11-25.json";
 import {
   generateSummary,
   StructuredSummary,
@@ -13,6 +12,7 @@ import HumanModel3D, {
 import DoctorPage from "./DoctorPage";
 
 interface SummaryPageProps {
+  conversationLog?: ConversationLog; // conversation log를 props로 받음
   onComplete?: () => void;
 }
 
@@ -41,7 +41,10 @@ type EditingState =
     }
   | null;
 
-export default function SummaryPage({ onComplete }: SummaryPageProps) {
+export default function SummaryPage({
+  conversationLog: propConversationLog,
+  onComplete,
+}: SummaryPageProps) {
   const [summary, setSummary] = useState<StructuredSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +53,15 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
 
   useEffect(() => {
     const loadAndGenerateSummary = async () => {
+      // props로 받은 conversation log가 없으면 에러
+      if (!propConversationLog) {
+        setError("대화 로그가 없습니다.");
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const conversationLog = conversationLogData as ConversationLog;
-        const generatedSummary = await generateSummary(conversationLog);
+        const generatedSummary = await generateSummary(propConversationLog);
         setSummary(generatedSummary);
       } catch (err: any) {
         console.error("요약 생성 오류:", err);
@@ -63,7 +72,7 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
     };
 
     loadAndGenerateSummary();
-  }, []);
+  }, [propConversationLog]);
 
   // progress 값에 따라 증상을 분류 (카테고리 정보 포함)
   const getSymptomStatusItems = useMemo(() => {
@@ -464,12 +473,11 @@ export default function SummaryPage({ onComplete }: SummaryPageProps) {
   }
 
   // 의사용 페이지 표시
-  if (showDoctorPage && summary) {
-    const conversationLog = conversationLogData as ConversationLog;
+  if (showDoctorPage && summary && propConversationLog) {
     return (
       <DoctorPage
         summary={summary}
-        conversationLog={conversationLog}
+        conversationLog={propConversationLog}
         onComplete={handleDoctorPageComplete}
         onBack={handleDoctorPageBack}
       />
