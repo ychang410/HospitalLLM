@@ -8,7 +8,7 @@ import scripts from '../data/scripts.json';
 import { MedicalRecordAnalysis } from '../services/gpt-common';
 import { USE_BIRTHDATE_VERSION } from '../config/patient-info';
 import { chatAboutSymptom, chatAboutExamination, SymptomChatResponse, getMainDiagnosisIntroMessages, getSymptomIntroMessage, getSymptomInitialQuestion, getExaminationMessages, getMainDiagnosisCompletionMessage } from '../services/gpt-chat-main-diagnosis';
-import { generateNewPainQuestion, chatAboutNewPain, NewPainChatResponse, getOtherNewPainIntroMessages, getOtherPainEmptyMessage, getOtherPainFirstQuestion, getNewPainHardcodedMessage, getNewPainCompletionMessage } from '../services/gpt-chat-new-pain';
+import { generateNewPainQuestion, getOtherNewPainIntroMessages, getOtherPainEmptyMessage, getOtherPainFirstQuestion, getNewPainHardcodedMessage, getNewPainCompletionMessage, chatAboutNewPain, NewPainChatResponse } from '../services/gpt-chat-new-pain';
 import { generateSideEffectQuestion, chatAboutSideEffects, SideEffectChatResponse, getSideEffectsIntroMessage, getMedicationHardcodedMessage, getMedicationEmptyMessage, getSideEffectCompletionMessage } from '../services/gpt-chat-side-effects';
 import { generateAdditionalQuestion, chatAboutAdditional, AdditionalChatResponse, getAdditionalIntroMessage, getAdditionalHardcodedMessage, getAdditionalCompletionMessage } from '../services/gpt-chat-additional';
 import { determineBodyPartForSymptom, extractSymptomsFromMessage } from '../services/gpt-body-part';
@@ -132,7 +132,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
   const [loadedSubSections, setLoadedSubSections] = useState<Set<string>>(new Set());
   const mainDiagnosisIntroShownRef = useRef(false);
   const newPainIntroShownRef = useRef(false);
-  const newPainQuestionGeneratedRef = useRef(false); // 새로운 통증 서브섹션에서 GPT 질문 생성 여부 추적
+  const newPainQuestionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // GPT 질문 생성 setTimeout 추적
   const [isGeneratingIntro, setIsGeneratingIntro] = useState(false);
   const [isProcessingGPT, setIsProcessingGPT] = useState(false);
   const [completedSymptomSubSections, setCompletedSymptomSubSections] = useState<Set<string>>(new Set()); // 완료된 증상 서브섹션 추적
@@ -392,10 +392,14 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
       if (!TEST_MODE && completedNewPainSubSections.size < newPainSubSections.length) {
         return;
       }
+      
+      // 같은 카테고리를 다시 클릭한 경우에도 서브섹션을 null로 설정하여 intro 메시지 표시
+      const isSameCategory = currentCategory === category;
+      
       setCurrentCategory(category);
       setCurrentMainDiagnosisSubSection(null);
       setCurrentNewPainSubSection(null);
-      setCurrentSideEffectSubSection(null);
+      setCurrentSideEffectSubSection(null); // 항상 null로 설정하여 intro 메시지 표시
       setCurrentAdditionalSubSection(null);
       
       // 이미 활성화된 서브섹션이 있으면 maxReachedSideEffectSubSectionIndex를 유지
@@ -410,10 +414,10 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
       }
       setMaxReachedSideEffectSubSectionIndex(maxActivatedIndex);
       
-      // 부작용 섹션 intro 메시지 추가 (이미 있으면 추가하지 않음)
+      // 부작용 섹션 intro 메시지 추가 (같은 카테고리를 다시 클릭한 경우에도 표시)
       const introKey = 'side_effects_intro';
       const existingIntroMessages = messagesBySection.get(introKey);
-      if (!existingIntroMessages || existingIntroMessages.length === 0) {
+      if (!existingIntroMessages || existingIntroMessages.length === 0 || isSameCategory) {
         const introMessage: Message = {
           id: `side_effects_intro_${Date.now()}`,
           role: 'assistant',
@@ -766,8 +770,13 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
       setHighlightedBodyParts([]);
       
       if (!isActivated) {
+        // 이전 setTimeout 취소 (중복 실행 방지)
+        if (newPainQuestionTimeoutRef.current) {
+          clearTimeout(newPainQuestionTimeoutRef.current);
+          newPainQuestionTimeoutRef.current = null;
+        }
+        
         // GPT 질문 생성 여부 ref 초기화
-        newPainQuestionGeneratedRef.current = false;
         setIsProcessingGPT(true);
         
         // 첫 번째 하드코딩된 메시지
@@ -781,7 +790,12 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         // 하드코딩된 메시지 먼저 표시
         setMessagesBySection(prev => {
           const newMap = new Map(prev);
-          newMap.set(sectionKey, [hardcodedMessage]);
+          // 이미 메시지가 있으면 추가하지 않음 (중복 방지)
+          const existingMessages = newMap.get(sectionKey) || [];
+          const hasHardcodedMessage = existingMessages.some(msg => msg.content === getNewPainHardcodedMessage());
+          if (!hasHardcodedMessage) {
+            newMap.set(sectionKey, [hardcodedMessage]);
+          }
           return newMap;
         });
         
@@ -794,24 +808,32 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
             );
             
             // GPT 질문 메시지 추가 (800ms 후)
-            setTimeout(() => {
-              const gptMessage: Message = {
-                id: `${sectionKey}_gpt_${Date.now()}`,
-                role: 'assistant',
-                content: gptQuestion,
-                timestamp: new Date(),
-              };
-              
+            const timeoutId = setTimeout(() => {
               setMessagesBySection(prev => {
                 const newMap = new Map(prev);
                 const existingMessages = newMap.get(sectionKey) || [];
-                newMap.set(sectionKey, [...existingMessages, gptMessage]);
+                // 이미 같은 내용의 GPT 질문이 있으면 추가하지 않음 (중복 방지)
+                const hasGptQuestion = existingMessages.some(msg => 
+                  msg.role === 'assistant' && 
+                  msg.content.includes('앞에서 이야기한 증상들 외에')
+                );
+                if (!hasGptQuestion) {
+                  const gptMessage: Message = {
+                    id: `${sectionKey}_gpt_${Date.now()}`,
+                    role: 'assistant',
+                    content: gptQuestion,
+                    timestamp: new Date(),
+                  };
+                  newMap.set(sectionKey, [...existingMessages, gptMessage]);
+                }
                 return newMap;
               });
               
-              newPainQuestionGeneratedRef.current = true; // GPT 질문 생성 완료 표시
               setIsProcessingGPT(false);
+              newPainQuestionTimeoutRef.current = null;
             }, 800);
+            
+            newPainQuestionTimeoutRef.current = timeoutId;
           } catch (error) {
             console.error('새로운 통증 질문 생성 오류:', error);
             setIsProcessingGPT(false);
@@ -819,9 +841,6 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         } else {
           setIsProcessingGPT(false);
         }
-      } else {
-        // 이미 활성화된 서브섹션이면 GPT 질문이 생성되었을 것으로 간주
-        newPainQuestionGeneratedRef.current = true;
       }
     }
 
@@ -1244,6 +1263,141 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
     loadedSubSections,
   ]);
 
+  // 사용자 메시지에서 종료 키워드 확인 함수
+  const checkForTerminationKeywords = (content: string): boolean => {
+    const normalizedContent = content.trim();
+    // "대화 종료" 키워드 확인
+    return normalizedContent.includes('대화 종료');
+  };
+
+  // 강제 종료 처리 함수
+  const handleForceComplete = async (sectionKey: string, category: Category, subSection: string | null) => {
+    // 각 섹션별 하드코딩된 완료 메시지 사용
+    let completionMessageText = '';
+    if (category === 'main_diagnosis') {
+      completionMessageText = getMainDiagnosisCompletionMessage();
+    } else if (category === 'other_new_pain') {
+      completionMessageText = getNewPainCompletionMessage();
+    } else if (category === 'side_effects') {
+      completionMessageText = getSideEffectCompletionMessage();
+    } else if (category === 'additional_questions') {
+      completionMessageText = getAdditionalCompletionMessage();
+    }
+    
+    // 감사 메시지 추가
+    const completionMessage: Message = {
+      id: `${sectionKey}_completion_${Date.now()}`,
+      role: 'assistant',
+      content: completionMessageText,
+      timestamp: new Date(),
+    };
+    
+    setMessagesBySection(prev => {
+      const newMap = new Map(prev);
+      const existingMessages = newMap.get(sectionKey) || [];
+      newMap.set(sectionKey, [...existingMessages, completionMessage]);
+      return newMap;
+    });
+    
+    // 완료 처리 및 다음으로 이동
+    if (category === 'main_diagnosis' && subSection) {
+      const subSectionKey = `main_diagnosis_${subSection}`;
+      const subSectionIndex = mainDiagnosisSubSections.findIndex(s => s.key === subSection);
+      
+      // 완료 상태 설정 (두 가지 모두 설정)
+      setCompletedSymptomSubSections(prev => new Set([...prev, subSectionKey]));
+      setCompletedMainDiagnosisSubSections(prev => {
+        const updated = new Set(prev);
+        updated.add(subSection as MainDiagnosisSubSection);
+        return updated;
+      });
+      // maxReached 인덱스 업데이트
+      setMaxReachedMainDiagnosisSubSectionIndex(subSectionIndex);
+      
+      // 다음 서브섹션으로 이동
+      if (subSectionIndex + 1 < mainDiagnosisSubSections.length) {
+        const nextSubSection = mainDiagnosisSubSections[subSectionIndex + 1];
+        setTimeout(() => {
+          handleMainDiagnosisSubSectionChange(nextSubSection.key);
+        }, 2000);
+      } else {
+        // 모든 서브섹션 완료 시 다음 카테고리로 이동
+        setMaxReachedIndex(1);
+        setTimeout(() => {
+          handleCategoryChange('other_new_pain');
+        }, 2000);
+      }
+    } else if (category === 'other_new_pain' && subSection) {
+      const subSectionIndex = newPainSubSections.findIndex(s => s.key === subSection);
+      
+      // 완료 상태 설정
+      setCompletedNewPainSubSections(prev => {
+        const updated = new Set(prev);
+        updated.add(subSection as NewPainSubSection);
+        return updated;
+      });
+      // maxReached 인덱스 업데이트
+      setMaxReachedNewPainSubSectionIndex(subSectionIndex);
+      
+      // 다음 서브섹션으로 이동
+      if (subSectionIndex + 1 < newPainSubSections.length) {
+        const nextSubSection = newPainSubSections[subSectionIndex + 1];
+        setTimeout(() => {
+          handleNewPainSubSectionChange(nextSubSection.key);
+        }, 2000);
+      } else {
+        // 모든 서브섹션 완료 시 다음 카테고리로 이동
+        setMaxReachedIndex(2);
+        setTimeout(() => {
+          handleCategoryChange('side_effects');
+        }, 2000);
+      }
+    } else if (category === 'side_effects' && subSection) {
+      const subSectionIndex = sideEffectSubSections.findIndex(s => s.key === subSection);
+      
+      // 완료 상태 설정 및 모든 서브섹션 완료 확인
+      setCompletedSideEffectSubSections(prev => {
+        const updated = new Set(prev);
+        updated.add(subSection as SideEffectSubSection);
+        
+        // 모든 서브섹션 완료 확인
+        if (updated.size === sideEffectSubSections.length) {
+          // 모든 서브섹션 완료 시 다음 카테고리로 이동
+          setMaxReachedIndex(3);
+          setTimeout(() => {
+            handleCategoryChange('additional_questions');
+          }, 2000);
+        }
+        
+        return updated;
+      });
+      // maxReached 인덱스 업데이트
+      setMaxReachedSideEffectSubSectionIndex(subSectionIndex);
+    } else if (category === 'additional_questions' && subSection) {
+      const subSectionIndex = additionalSubSections.findIndex(s => s.key === subSection);
+      
+      // 완료 상태 설정
+      setCompletedAdditionalSubSections(prev => {
+        const updated = new Set(prev);
+        updated.add(subSection as AdditionalSubSection);
+        
+        // 모든 서브섹션 완료 확인
+        if (updated.size === additionalSubSections.length) {
+          // 모든 대화 완료
+          setTimeout(() => {
+            const conversationLog = createConversationLog();
+            downloadConversationLog();
+            onConversationComplete?.(conversationLog);
+          }, 2000);
+        }
+        
+        return updated;
+      });
+      // maxReached 인덱스 업데이트
+      setMaxReachedAdditionalSubSectionIndex(subSectionIndex);
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     // 주요 진단 내용 섹션에서 서브섹션이 없으면 메시지 받지 않음
     if (currentCategory === 'main_diagnosis' && !currentMainDiagnosisSubSection) {
@@ -1260,18 +1414,29 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
     
     // 현재 활성화된 서브섹션 키 찾기
     let sectionKey: string | null = null;
+    let currentSubSection: string | null = null;
     
     if (currentCategory === 'main_diagnosis' && currentMainDiagnosisSubSection) {
       sectionKey = `main_diagnosis_${currentMainDiagnosisSubSection}`;
+      currentSubSection = currentMainDiagnosisSubSection;
     } else if (currentCategory === 'other_new_pain' && currentNewPainSubSection) {
       sectionKey = `other_new_pain_${currentNewPainSubSection}`;
+      currentSubSection = currentNewPainSubSection;
     } else if (currentCategory === 'side_effects' && currentSideEffectSubSection) {
       sectionKey = `side_effects_${currentSideEffectSubSection}`;
+      currentSubSection = currentSideEffectSubSection;
     } else if (currentCategory === 'additional_questions' && currentAdditionalSubSection) {
       sectionKey = `additional_questions_${currentAdditionalSubSection}`;
+      currentSubSection = currentAdditionalSubSection;
     }
     
     if (!sectionKey) return; // 활성화된 서브섹션이 없으면 메시지 추가 안 함
+    
+    // 종료 키워드 확인
+    if (checkForTerminationKeywords(content)) {
+      await handleForceComplete(sectionKey, currentCategory, currentSubSection);
+      return;
+    }
     
     // 사용자 메시지를 해당 서브섹션에 추가
     const userMessage: Message = {
@@ -1644,36 +1809,18 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
           }
         }
         
-        // 첫 번째 질문은 이미 handleNewPainSubSectionChange에서 생성되었으므로,
-        // GPT 질문이 아직 생성되지 않았거나, 사용자가 첫 답변을 보낼 때는 chatAboutNewPain을 호출하지 않음
-        // 대화 히스토리에서 assistant 메시지 개수 확인
-        const assistantMessages = conversationHistory.filter(msg => msg.role === 'assistant');
+        // 사용자 답변이 없으면 추가 질문 생성하지 않음
         const conversationUserMessages = conversationHistory.filter(msg => msg.role === 'user');
-        
-        // GPT 질문이 생성되지 않았거나, 사용자 메시지가 없으면 (첫 답변 전) chatAboutNewPain을 호출하지 않음
-        if (!newPainQuestionGeneratedRef.current || conversationUserMessages.length === 0) {
-          setIsProcessingGPT(false);
-          return;
-        }
-        
-        // GPT 질문이 생성되었고 사용자 답변이 있으면, 대화 히스토리에서 하드코딩 메시지와 GPT 초기 질문을 제외한 질문 개수 계산
-        const hardcodedMessage = getNewPainHardcodedMessage();
-        const actualQuestionCount = assistantMessages.filter(msg => 
-          msg.content !== hardcodedMessage && 
-          !msg.content.includes('앞에서 이야기한 증상들 외에')
-        ).length;
-        
-        // 실제 질문 개수가 0이면 (하드코딩 메시지와 GPT 초기 질문만 있는 경우) chatAboutNewPain을 호출하지 않음
-        if (actualQuestionCount === 0) {
+        if (conversationUserMessages.length === 0) {
           setIsProcessingGPT(false);
           return;
         }
         
         try {
-          const response: NewPainChatResponse = await chatAboutNewPain(
+          // chatAboutNewPain 호출 (absent와 유사한 구조)
+          const response = await chatAboutNewPain(
             patientInfo.name,
             medicalRecordAnalysis?.mainDiagnosis || '',
-            mentionedSymptoms,
             conversationHistory
           );
           
@@ -1685,7 +1832,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
             assistantMessage = {
               id: `${sectionKey}_assistant_${Date.now()}`,
               role: 'assistant',
-              content: getSideEffectCompletionMessage(),
+              content: getNewPainCompletionMessage(),
               timestamp: new Date(),
             };
             
@@ -1723,7 +1870,7 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
             });
             setMaxReachedNewPainSubSectionIndex(subSectionIndex);
           } else {
-            // 추가 질문
+            // 다음 질문
             assistantMessage = {
               id: `${sectionKey}_assistant_${Date.now()}`,
               role: 'assistant',
