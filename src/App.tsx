@@ -72,7 +72,7 @@ function App() {
   const handleConversationComplete = (log: ConversationLog) => {
     setConversationLog(log);
     setShowChat(false);
-    setShowSummary(true); // Analysis 페이지를 건너뛰고 바로 Summary 페이지로 이동
+    setShowAnalysis(true); // Analysis 페이지를 먼저 표시
   };
 
   const handleAnalysisComplete = () => {
@@ -101,13 +101,28 @@ function App() {
     return <MedicalRecordUpload onUploadComplete={handleUploadComplete} />;
   }
 
-  // 2단계: 환자 정보 입력
-  if (!showChat) {
-    return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
+  // 5단계: 요약 페이지 (conversation log가 있을 때만) - 가장 높은 우선순위
+  if (showSummary && conversationLog) {
+    return (
+      <SummaryPage
+        conversationLog={conversationLog}
+        onComplete={handleSummaryComplete}
+      />
+    );
+  }
+
+  // 4단계: 분석 중 페이지 (챗봇 완료 후)
+  if (showAnalysis && patientInfo) {
+    return (
+      <AnalysisPage
+        patientInfo={patientInfo}
+        onComplete={handleAnalysisComplete}
+      />
+    );
   }
 
   // 3단계: 챗봇 인터페이스
-  if (showChat && !showSummary) {
+  if (showChat) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-50">
         <ChatInterface
@@ -122,25 +137,8 @@ function App() {
     );
   }
 
-  // 4단계: 분석 중 페이지 (선택적)
-  if (showAnalysis && patientInfo && !showSummary) {
-    return (
-      <AnalysisPage
-        patientInfo={patientInfo}
-        onComplete={handleAnalysisComplete}
-      />
-    );
-  }
-
-  // 5단계: 요약 페이지 (conversation log가 있을 때만)
-  if (showSummary && conversationLog) {
-    return (
-      <SummaryPage
-        conversationLog={conversationLog}
-        onComplete={handleSummaryComplete}
-      />
-    );
-  }
+  // 2단계: 환자 정보 입력 (showChat이 false이고 다른 페이지가 표시되지 않을 때만)
+  return <PatientInfoForm onSubmit={handlePatientInfoSubmit} />;
 
   return null;
 }
