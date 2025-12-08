@@ -267,6 +267,10 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
     try {
       const conversationLog = createConversationLog();
 
+  // 대화 로그를 JSON 파일로 자동 다운로드
+  const downloadConversationLog = () => {
+    try {
+      const conversationLog = createConversationLog();
       const json = JSON.stringify(conversationLog, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);

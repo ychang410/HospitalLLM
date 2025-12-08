@@ -8,6 +8,7 @@ import { MedicalRecordAnalysis } from "./services/gpt-common";
 import { ConversationLog } from "./components/ChatInterface";
 import { USE_BIRTHDATE_VERSION } from "./config/patient-info";
 
+
 export interface PatientInfo {
   name: string;
   gender: string;
@@ -129,7 +130,7 @@ function App() {
   }
 
   // 3단계: 챗봇 인터페이스
-  if (showChat) {
+  if (showChat && !showSummary) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-50">
         <ChatInterface
