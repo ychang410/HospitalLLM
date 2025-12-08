@@ -25,6 +25,7 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [conversationLog, setConversationLog] = useState<ConversationLog | null>(null);
 
   const handleUploadComplete = (
     file: File | null,
@@ -59,17 +60,19 @@ function App() {
         medicalRecordAnalysis: medicalRecordAnalysis || undefined,
       };
 
-      // 로컬 스토리지에 초기 로그 저장
-      const storageKey = `conversation_log_${newPatientId}_${medicalRecordId}`;
+      // 로컬 스토리지에 초기 로그 저장 (생년월일 기반)
+      const birthDate = `${info.birthYear}-${info.birthMonth.padStart(2, '0')}-${info.birthDay.padStart(2, '0')}`;
+      const storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
       localStorage.setItem(storageKey, JSON.stringify(initialLog));
     }
 
     setShowChat(true);
   };
 
-  const handleConversationComplete = () => {
+  const handleConversationComplete = (log: ConversationLog) => {
+    setConversationLog(log);
     setShowChat(false);
-    setShowAnalysis(true);
+    setShowSummary(true); // Analysis 페이지를 건너뛰고 바로 Summary 페이지로 이동
   };
 
   const handleAnalysisComplete = () => {
@@ -87,6 +90,7 @@ function App() {
     setMedicalRecordAnalysis(null);
     setPatientInfo(null);
     setPatientId(null);
+    setConversationLog(null);
   };
 
   // 개발 중: Summary 페이지만 표시
@@ -103,7 +107,7 @@ function App() {
   }
 
   // 3단계: 챗봇 인터페이스
-  if (showChat) {
+  if (showChat && !showSummary) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gray-50">
         <ChatInterface
@@ -118,8 +122,8 @@ function App() {
     );
   }
 
-  // 4단계: 분석 중 페이지
-  if (showAnalysis && patientInfo) {
+  // 4단계: 분석 중 페이지 (선택적)
+  if (showAnalysis && patientInfo && !showSummary) {
     return (
       <AnalysisPage
         patientInfo={patientInfo}
@@ -128,10 +132,11 @@ function App() {
     );
   }
 
-  // 5단계: 요약 페이지
-  if (showSummary) {
+  // 5단계: 요약 페이지 (conversation log가 있을 때만)
+  if (showSummary && conversationLog) {
     return (
       <SummaryPage
+        conversationLog={conversationLog}
         onComplete={handleSummaryComplete}
       />
     );

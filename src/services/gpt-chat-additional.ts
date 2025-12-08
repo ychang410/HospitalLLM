@@ -5,6 +5,16 @@ export interface AdditionalChatResponse {
   isComplete: boolean;
 }
 
+// 하드코딩 메시지 헬퍼
+export const getAdditionalIntroMessage = (patientName: string) =>
+  `${patientName}님, 문진이 거의 완료되었습니다. 마지막으로 '추가 질문'을 클릭해 마지막 문답을 해주세요.`;
+
+export const getAdditionalHardcodedMessage = () =>
+  '추가질문 항목입니다.';
+
+export const getAdditionalCompletionMessage = () =>
+  '답변 감사합니다. 문진이 완료되었습니다.';
+
 /**
  * 추가 질문에 대한 초기 질문을 생성합니다.
  * @param patientName 환자 이름

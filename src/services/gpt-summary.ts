@@ -30,8 +30,8 @@ export async function generateSummary(
     "main_diagnosis_diagnosis_a",
     "main_diagnosis_diagnosis_b",
     "main_diagnosis_diagnosis_c",
-    "new_pain_other_pain",
-    "new_pain_new_pain",
+    "other_new_pain_other_pain",
+    "other_new_pain_new_pain",
   ];
   const additionalSectionKeys = [
     "additional_questions_additional_question",

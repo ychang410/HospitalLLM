@@ -5,6 +5,19 @@ export interface SideEffectChatResponse {
   isComplete: boolean;
 }
 
+// 하드코딩 메시지 헬퍼
+export const getSideEffectsIntroMessage = (patientName: string) =>
+  `${patientName}님, 다음으로는 부작용에 대해 질문을 드릴게요. '복용 약'을 클릭해 질문해 답해주세요.`;
+
+export const getMedicationHardcodedMessage = (medicationsText: string) =>
+  `지난번에 ${medicationsText} 약을 처방받으셨네요.`;
+
+export const getMedicationEmptyMessage = () =>
+  '복용 중인 약물이 없습니다. 다음 질문으로 넘어갈게요.';
+
+export const getSideEffectCompletionMessage = () =>
+  '답변 감사합니다. 다음 질문으로 넘어가볼게요.';
+
 /**
  * 부작용에 대한 초기 질문을 생성합니다.
  * @param patientName 환자 이름

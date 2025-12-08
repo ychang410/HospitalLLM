@@ -18,6 +18,24 @@ export interface NewPainQuestionList {
   currentQuestionIndex: number; // 현재 질문 인덱스
 }
 
+// 하드코딩 메시지 헬퍼
+export const getOtherNewPainIntroMessages = (patientName: string): string[] => [
+  `${patientName}님, 다음으로는 주요 진단 내용과 관련된 내용 외에, 다른 증상들에 대해서 몇 가지 질문을 드릴게요.`,
+  `위의 '그 외 통증'을 눌러서 문답을 시작해주세요.`,
+];
+
+export const getOtherPainEmptyMessage = () =>
+  '지난 진료 때 앞선 주요 증상들외에 언급해주신 다른 증상들이 없었습니다. 다음 질문으로 넘어갈게요.';
+
+export const getOtherPainFirstQuestion = (symptomName: string) =>
+  `지난번에 ${symptomName}을(를) 언급해주셨는데, 혹시 기억나시나요?`;
+
+export const getNewPainHardcodedMessage = () =>
+  '다음으로는 새로운 통증에 대한 질문입니다.';
+
+export const getNewPainCompletionMessage = () =>
+  '답변 감사합니다. 다음 질문으로 넘어가볼게요.';
+
 /**
  * 새로운 통증에 대한 초기 질문을 생성합니다.
  * @param patientName 환자 이름
