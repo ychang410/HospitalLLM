@@ -7,7 +7,7 @@ import HumanModel3D from './HumanModel/HumanModel3D';
 import scripts from '../data/scripts.json';
 import { MedicalRecordAnalysis } from '../services/gpt-common';
 import { USE_BIRTHDATE_VERSION } from '../config/patient-info';
-import { chatAboutSymptom, chatAboutExamination, SymptomChatResponse, getMainDiagnosisIntroMessages, getSymptomIntroMessage, getSymptomInitialQuestion, getExaminationMessages, getMainDiagnosisCompletionMessage } from '../services/gpt-chat-main-diagnosis';
+import { chatAboutSymptom, chatAboutExamination, SymptomChatResponse, getMainDiagnosisIntroMessages, getSymptomIntroMessage, getSymptomInitialQuestion, getExaminationMessages, getExaminationEmptyMessage, getMainDiagnosisCompletionMessage } from '../services/gpt-chat-main-diagnosis';
 import { generateNewPainQuestion, getOtherNewPainIntroMessages, getOtherPainEmptyMessage, getOtherPainFirstQuestion, getNewPainHardcodedMessage, getNewPainCompletionMessage, chatAboutNewPain, NewPainChatResponse } from '../services/gpt-chat-new-pain';
 import { generateSideEffectQuestion, chatAboutSideEffects, SideEffectChatResponse, getSideEffectsIntroMessage, getMedicationHardcodedMessage, getMedicationEmptyMessage, getSideEffectCompletionMessage } from '../services/gpt-chat-side-effects';
 import { generateAdditionalQuestion, chatAboutAdditional, AdditionalChatResponse, getAdditionalIntroMessage, getAdditionalHardcodedMessage, getAdditionalCompletionMessage } from '../services/gpt-chat-additional';
@@ -574,7 +574,69 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
         // 검사 서브섹션 처리
         // 검사 정보 가져오기
         const examinations = medicalRecordAnalysis?.examinations || [];
-        if (examinations.length > 0) {
+        if (examinations.length === 0) {
+          // 검사가 없으면 하드코딩 메시지 표시
+          const emptyMessage: Message = {
+            id: `${sectionKey}_empty_${Date.now()}`,
+            role: 'assistant',
+            content: getExaminationEmptyMessage(),
+            timestamp: new Date(),
+          };
+          
+          setMessagesBySection(prev => {
+            const newMap = new Map(prev);
+            newMap.set(sectionKey, [emptyMessage]);
+            return newMap;
+          });
+          
+          setIsProcessingGPT(false);
+          
+          // 자동으로 완료 처리하고 다음 서브섹션으로 이동
+          setTimeout(() => {
+            setCompletedSymptomSubSections(prev => {
+              const updated = new Set(prev);
+              updated.add(`main_diagnosis_${subSection}`);
+              return updated;
+            });
+            setCompletedMainDiagnosisSubSections(prev => {
+              const updated = new Set(prev);
+              updated.add(subSection);
+              
+              // 다음 서브섹션 찾기
+              const nextSubSectionIndex = subSectionIndex + 1;
+              
+              // 다음 서브섹션이 있으면 자동으로 넘어감
+              if (nextSubSectionIndex < mainDiagnosisSubSections.length) {
+                const nextSubSection = mainDiagnosisSubSections[nextSubSectionIndex];
+                
+                // 다음 서브섹션이 diagnosis_a, b, c, examination 중 하나인 경우 자동 이동
+                if (nextSubSection.key === 'diagnosis_a' || nextSubSection.key === 'diagnosis_b' || nextSubSection.key === 'diagnosis_c' || nextSubSection.key === 'examination') {
+                  setTimeout(() => {
+                    handleMainDiagnosisSubSectionChange(nextSubSection.key);
+                    setMaxReachedMainDiagnosisSubSectionIndex(nextSubSectionIndex);
+                  }, 2000);
+                }
+              } else {
+                // 모든 서브섹션이 완료됨
+                if (updated.size === mainDiagnosisSubSections.length) {
+                  setMaxReachedIndex(prevIndex => Math.max(prevIndex, 1)); // 그외/새로운 통증 섹션 인덱스
+                  
+                  // 다음 카테고리로 자동 전환 (2.5초 후)
+                  const currentCategoryIndex = categoryOrder.indexOf('main_diagnosis');
+                  if (currentCategoryIndex < categoryOrder.length - 1) {
+                    const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                    setTimeout(() => {
+                      handleCategoryChange(nextCategory);
+                    }, 2500);
+                  }
+                }
+              }
+              
+              return updated;
+            });
+            setMaxReachedMainDiagnosisSubSectionIndex(subSectionIndex);
+          }, 2000);
+        } else {
           // 첫 번째 검사 사용
           const examinationName = examinations[0].name;
           
@@ -897,27 +959,32 @@ export default function ChatInterface({ patientInfo, medicalRecord, patientId, m
             return newMap;
           });
           
-          // 자동으로 완료 처리
+          setIsProcessingGPT(false);
+          
+          // 자동으로 완료 처리하고 다음 서브섹션으로 이동
           setTimeout(() => {
             setCompletedSideEffectSubSections(prev => {
               const updated = new Set(prev);
               updated.add(subSection);
-              if (updated.size === sideEffectSubSections.length) {
-                setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3)); // 기타 섹션 인덱스
-                
-                // 다음 카테고리로 자동 전환 (2초 후)
-                const currentCategoryIndex = categoryOrder.indexOf('side_effects');
-                if (currentCategoryIndex < categoryOrder.length - 1) {
-                  const nextCategory = categoryOrder[currentCategoryIndex + 1];
-                  setTimeout(() => {
-                    handleCategoryChange(nextCategory);
-                    // 첫 번째 서브섹션은 사용자가 직접 클릭해야 함 (자동 시작하지 않음)
-                  }, 2500);
-                }
-              }
               return updated;
             });
-            setIsProcessingGPT(false);
+            setMaxReachedSideEffectSubSectionIndex(subSectionIndex);
+            
+            // 모든 서브섹션이 완료되었는지 확인
+            if (sideEffectSubSections.length === 1) {
+              // 모든 서브섹션이 완료됨
+              setMaxReachedIndex(prevIndex => Math.max(prevIndex, 3)); // 기타 섹션 인덱스
+              
+              // 다음 카테고리로 자동 전환 (2.5초 후)
+              const currentCategoryIndex = categoryOrder.indexOf('side_effects');
+              if (currentCategoryIndex < categoryOrder.length - 1) {
+                const nextCategory = categoryOrder[currentCategoryIndex + 1];
+                setTimeout(() => {
+                  handleCategoryChange(nextCategory);
+                  // 첫 번째 서브섹션은 사용자가 직접 클릭해야 함 (자동 시작하지 않음)
+                }, 2500);
+              }
+            }
           }, 2000);
         } else {
           // 약물이 있으면 하드코딩 메시지 먼저 생성

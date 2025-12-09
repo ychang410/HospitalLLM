@@ -55,6 +55,9 @@ export const getExaminationMessages = (examinationName: string): string[] => [
   `예를 들어, 받았던 검사의 목적이 무엇이었는지, 다음에 또 다른 검사도 계획되어 있는지, 검사 결과에 대해 궁금하신 점이 있으시면 말씀해주세요.`,
 ];
 
+export const getExaminationEmptyMessage = () =>
+  '지난 진료 때 처방 받으신 검사가 없었습니다. 다음 질문으로 넘어갈게요.';
+
 export const getMainDiagnosisCompletionMessage = () =>
   '답변 감사합니다. 다음 질문으로 넘어가볼게요.';
 

@@ -659,7 +659,7 @@ export default function SummaryPage({
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-4">
                 <h3 className="text-xl font-semibold text-gray-900">
-                  진료 중 전달사항
+                  진료 시 다음 내용을 전달해보세요.
                 </h3>
               </div>
               {summary.notesForDoctor.length > 0 ? (
