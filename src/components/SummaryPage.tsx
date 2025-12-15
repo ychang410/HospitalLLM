@@ -58,11 +58,14 @@ export default function SummaryPage({
   const [error, setError] = useState<string | null>(null);
   const [showDoctorPage, setShowDoctorPage] = useState(false);
   const [editingState, setEditingState] = useState<EditingState>(null);
-  const [conversationLog, setConversationLog] = useState<ConversationLog | null>(null);
+  const [conversationLog, setConversationLog] =
+    useState<ConversationLog | null>(null);
   const [showFileInput, setShowFileInput] = useState(false);
 
   // 파일 선택 핸들러
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -70,14 +73,16 @@ export default function SummaryPage({
       const text = await file.text();
       const conversationLogData: ConversationLog = JSON.parse(text);
       setConversationLog(conversationLogData);
-      
+
       const generatedSummary = await generateSummary(conversationLogData);
       setSummary(generatedSummary);
       setIsLoading(false);
       setShowFileInput(false);
     } catch (err: any) {
       console.error("파일 읽기 오류:", err);
-      setError("파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요.");
+      setError(
+        "파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인해주세요."
+      );
       setIsLoading(false);
     }
   };
@@ -108,14 +113,17 @@ export default function SummaryPage({
         }
 
         // 먼저 로컬 스토리지에서 시도
-        const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
+        const birthDate = `${birthYear}-${birthMonth.padStart(
+          2,
+          "0"
+        )}-${birthDay.padStart(2, "0")}`;
         const storageKey = `conversation_log_${birthDate}_${medicalRecordId}`;
         const storedLog = localStorage.getItem(storageKey);
-        
+
         if (storedLog) {
           const conversationLogData: ConversationLog = JSON.parse(storedLog);
           setConversationLog(conversationLogData);
-          
+
           const generatedSummary = await generateSummary(conversationLogData);
           setSummary(generatedSummary);
           setIsLoading(false);
@@ -449,10 +457,10 @@ export default function SummaryPage({
                     <>
                       <div className="flex justify-between items-start gap-2">
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-xl text-gray-900">
                             {item.symptom}
                           </p>
-                          <p className="text-gray-600 text-base leading-relaxed mt-1">
+                          <p className="text-gray-600 text-lg leading-relaxed mt-2">
                             {item.details}
                           </p>
                         </div>
@@ -478,7 +486,7 @@ export default function SummaryPage({
             })}
           </ul>
         ) : (
-          <p className="text-gray-400 text-base">{emptyText}</p>
+          <p className="text-gray-400 text-lg">{emptyText}</p>
         )}
       </div>
     );
@@ -573,18 +581,18 @@ export default function SummaryPage({
 
   return (
     <div className="w-full min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto flex gap-8">
+      <div className="max-w-8xl mx-auto flex gap-8">
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-10 w-[400px] overflow-hidden self-start sticky top-6">
           <h2 className="text-2xl font-semibold text-gray-800">
             신체 부위 표시
           </h2>
-          <div className="w-[240px] aspect-[240/420]">
+          <div className="w-[250px] h-[520px]">
             <HumanModel3D
               highlightedParts={highlightedParts}
               partStatusMap={partStatusMap}
             />
           </div>
-          <div className="mt-6 space-y-3">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-red-500"></div>
               <span className="text-sm text-gray-700">악화증상</span>
@@ -605,61 +613,54 @@ export default function SummaryPage({
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full">
-          {/* <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              {conversationLogData.patientInfo?.name || "환자"}님의 문진 요약
-            </h1>
-            <p className="text-gray-600">
-              {conversationLogData.startTime
-                ? new Date(conversationLogData.startTime).toLocaleDateString(
-                    "ko-KR",
-                    {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    }
-                  )
-                : new Date().toLocaleDateString("ko-KR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-            </p>
-          </div> */}
-
-          <div className="space-y-6 w-full">
-            <div className="flex flex-col gap-4">
-              {renderSymptomColumn(
-                "증상이 악화되었어요.",
-                getSymptomStatusItems.worse,
-                "text-red-600",
-                "해당 내용이 없습니다."
-              )}
-              {renderSymptomColumn(
-                "증상의 변화가 없어요.",
-                getSymptomStatusItems.same,
-                "text-yellow-600",
-                "해당 내용이 없습니다."
-              )}
-              {renderSymptomColumn(
-                "증상이 나아졌어요.",
-                getSymptomStatusItems.better,
-                "text-green-600",
-                "해당 내용이 없습니다."
-              )}
-              {renderSymptomColumn(
-                "새로운 증상이 생겼어요.",
-                getSymptomStatusItems.newSymptoms,
-                "text-blue-600",
-                "새롭게 보고된 증상이 없습니다."
-              )}
+        <div className="flex flex-col gap-10 w-full">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                사전 문진 요약
+              </h1>
+              <p className="text-gray-600">
+                {new Date().toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
             </div>
-
+            <div className="space-y-6 w-full">
+              <div className="flex flex-col gap-4">
+                {renderSymptomColumn(
+                  "증상이 악화되었어요.",
+                  getSymptomStatusItems.worse,
+                  "text-red-600",
+                  "해당 내용이 없습니다."
+                )}
+                {renderSymptomColumn(
+                  "증상의 변화가 없어요.",
+                  getSymptomStatusItems.same,
+                  "text-yellow-600",
+                  "해당 내용이 없습니다."
+                )}
+                {renderSymptomColumn(
+                  "증상이 나아졌어요.",
+                  getSymptomStatusItems.better,
+                  "text-green-600",
+                  "해당 내용이 없습니다."
+                )}
+                {renderSymptomColumn(
+                  "새로운 증상이 생겼어요.",
+                  getSymptomStatusItems.newSymptoms,
+                  "text-blue-600",
+                  "새롭게 보고된 증상이 없습니다."
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl ">
             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  진료 시 다음 내용을 전달해보세요.
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  다음 진료 시 추천 질문
                 </h3>
               </div>
               {summary.notesForDoctor.length > 0 ? (
@@ -703,8 +704,8 @@ export default function SummaryPage({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex justify-between items-start gap-2">
-                            <p className="text-gray-700 leading-relaxed flex-1">
+                          <div className="flex justify-between items-start gap-4">
+                            <p className="text-gray-700 text-lg leading-relaxed flex-1">
                               {note}
                             </p>
                             <div className="flex gap-2">

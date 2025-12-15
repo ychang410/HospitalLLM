@@ -184,19 +184,19 @@ export default function DoctorPage({
 
   return (
     <div className="w-full min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto flex gap-8">
+      <div className="max-w-8xl mx-auto flex gap-8">
         {/* 주요 진단 관련 증상 */}
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col gap-10 w-[400px] overflow-hidden self-start sticky top-6">
           <h2 className="text-2xl font-semibold text-gray-800">
             신체 부위 표시
           </h2>
-          <div className="w-[240px] aspect-[240/420]">
+          <div className="w-[250px] h-[520px]">
             <HumanModel3D
               highlightedParts={highlightedParts}
               partStatusMap={partStatusMap}
             />
           </div>
-          <div className="mt-6 space-y-3">
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-red-500"></div>
               <span className="text-sm text-gray-700">악화증상</span>
@@ -227,16 +227,16 @@ export default function DoctorPage({
                 {summary.mainDiagnosisSymptoms.map((symptom, index) => (
                   <div
                     key={`main-${index}`}
-                    className={`border rounded-lg p-4 ${getStatusColor(
+                    className={`border rounded-lg p-4 text-lg ${getStatusColor(
                       symptom.progress ?? "not_found"
                     )}`}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-lg">
+                      <h3 className="font-semibold text-xl">
                         {symptom.symptom}
                       </h3>
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        className={`px-3 py-1 rounded-full font-medium ${
                           symptom.progress === "worse"
                             ? "bg-red-100 text-red-700"
                             : symptom.progress === "same"
@@ -256,11 +256,6 @@ export default function DoctorPage({
                     {symptom.details && (
                       <p className="text-gray-700 mt-2 leading-relaxed">
                         {symptom.details ?? ""}
-                      </p>
-                    )}
-                    {symptom.progress === "no symptom" && (
-                      <p className="text-gray-600 text-sm mt-2">
-                        현재 해당 증상이 없다고 보고되었습니다.
                       </p>
                     )}
                   </div>
@@ -287,7 +282,7 @@ export default function DoctorPage({
                       )}`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg">
+                        <h3 className="font-semibold text-xl">
                           {symptom.name}
                         </h3>
                         <span
@@ -309,18 +304,13 @@ export default function DoctorPage({
                         </span>
                       </div>
                       {symptom.details && (
-                        <p className="text-gray-700 mt-2 leading-relaxed">
+                        <p className="text-gray-700 mt-2 text-lgleading-relaxed">
                           {symptom.details}
                         </p>
                       )}
                       {symptom.status === "not_found" && (
-                        <p className="text-gray-500 text-sm mt-2">
+                        <p className="text-gray-500 mt-2">
                           이번 문진에서 언급되지 않았습니다.
-                        </p>
-                      )}
-                      {symptom.status === "no symptom" && (
-                        <p className="text-gray-600 text-sm mt-2">
-                          현재 해당 증상이 없다고 보고되었습니다.
                         </p>
                       )}
                     </div>
@@ -344,15 +334,15 @@ export default function DoctorPage({
                       className="border border-blue-200 rounded-lg p-4 bg-blue-50"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg text-blue-900">
+                        <h3 className="font-semibold text-xl text-blue-700">
                           {symptom.symptom}
                         </h3>
-                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+                        <span className="px-3 py-1 rounded-full font-medium bg-blue-100 text-blue-700">
                           신규
                         </span>
                       </div>
                       {symptom.details && (
-                        <p className="text-gray-700 mt-2 leading-relaxed">
+                        <p className="text-gray-700 mt-2 text-lg leading-relaxed">
                           {symptom.details}
                         </p>
                       )}
